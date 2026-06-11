@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #040711;
+    font-family: 'Outfit', sans-serif;
+  }
+}
+
+/* Retro CRT Scanlines Effect */
+.crt-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.crt-effect::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 10;
+  background-size: 100% 4px, 6px 100%;
+  pointer-events: none;
+}
+
+/* Retro LCD Glassmorphism Panel */
+.lcd-panel {
+  background: linear-gradient(135deg, rgba(16, 20, 30, 0.95) 0%, rgba(8, 10, 16, 0.98) 100%);
+  border: 4px solid #1c2331;
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.6), 4px 4px 0px 0px #000;
+}
+
+/* Custom Scrollbar for Retro Feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #080a0f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1c2331;
+  border: 2px solid #080a0f;
+  image-rendering: pixelated;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ffcc01;
+}
+
+/* Pixel Art Image Rendering */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Custom retro fonts utility */
+.font-pixel {
+  font-family: 'NeoDunggeunmo', 'Press Start 2P', monospace;
+  line-height: 1.8;
+}
+
+/* Pokeball Loader Animation */
+.pokeball-loader {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(to bottom, #ef5350 50%, #ffffff 50%);
+  border-radius: 50%;
+  border: 4px solid #333;
+  position: relative;
+  animation: spin 1.2s linear infinite;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.pokeball-loader::before {
+  content: "";
+  position: absolute;
+  height: 8px;
+  width: 60px;
+  background: #333;
+  top: 22px;
+  left: -4px;
+}
+
+.pokeball-loader::after {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border: 4px solid #333;
+  border-radius: 50%;
+  top: 16px;
+  left: 16px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Retro Scanline Flickering */
+@keyframes flicker {
+  0% { opacity: 0.98; }
+  50% { opacity: 1; }
+  100% { opacity: 0.99; }
+}
+
+.flicker {
+  animation: flicker 0.15s infinite;
+}
+
+/* CRT Screen Power-On Animation */
+@keyframes scaleInY {
+  0% { transform: scaleY(0.01) scaleX(0); }
+  50% { transform: scaleY(0.01) scaleX(1); }
+  100% { transform: scaleY(1) scaleX(1); }
+}
+
+.screen-on {
+  animation: scaleInY 0.4s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+/* Animated 8-bit Spectators */
+@keyframes audience-jump {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3.5px); }
+}
+.animate-audience-1 {
+  animation: audience-jump 0.8s ease-in-out infinite;
+}
+.animate-audience-2 {
+  animation: audience-jump 0.9s ease-in-out infinite 0.15s;
+}
+.animate-audience-3 {
+  animation: audience-jump 0.7s ease-in-out infinite 0.3s;
+}
