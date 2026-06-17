@@ -506,6 +506,46 @@
       animation: player-pulse 1.5s infinite;
       z-index: 10;
     }
+
+    /* Flying Transit Animations */
+    @keyframes cloud-scroll {
+      0% { background-position: 0px 0; }
+      100% { background-position: -200px 0; }
+    }
+    .animate-cloud-scroll-slow {
+      animation: cloud-scroll 10s linear infinite;
+    }
+    .animate-cloud-scroll-fast {
+      animation: cloud-scroll 5s linear infinite;
+    }
+    @keyframes speed-lines {
+      0% { background-position: 0 0; }
+      100% { background-position: -300px 0; }
+    }
+    .animate-speed-lines {
+      animation: speed-lines 0.8s linear infinite;
+    }
+    @keyframes flight-bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    .animate-flight-bob {
+      animation: flight-bob 1s ease-in-out infinite;
+    }
+    @keyframes wind-trail {
+      0% { transform: translateX(0) scaleX(1); opacity: 0.8; }
+      100% { transform: translateX(-40px) scaleX(0.2); opacity: 0; }
+    }
+    .animate-wind-trail {
+      animation: wind-trail 0.4s linear infinite;
+    }
+    @keyframes flash-blink {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 0.9; }
+    }
+    .animate-flash-blink {
+      animation: flash-blink 0.15s ease-out;
+    }
   </style>
 </head>
 <body class="bg-[#04060b] text-[#f8f9fa] antialiased selection:bg-[#ffcc01] selection:text-black">
@@ -2247,6 +2287,181 @@
       const [explorePrevX, setExplorePrevX] = useState(null);
       const [explorePrevY, setExplorePrevY] = useState(null);
       const [exploreSanctuaryBanner, setExploreSanctuaryBanner] = useState(null);
+
+      // Flying Transit states
+      const [flightY, setFlightY] = useState(50); // player altitude (10% to 90%)
+      const [flightProgress, setFlightProgress] = useState(0); // 0 to 100%
+      const [flightObjects, setFlightObjects] = useState([]); // array of { id, x, y, type }
+      const [flightEarnedGold, setFlightEarnedGold] = useState(0);
+      const [flightEarnedBalls, setFlightEarnedBalls] = useState({ greatball: 0, ultraball: 0 });
+      const [flightMount, setFlightMount] = useState(null); // { name, sprite }
+      const [flightTargetBiome, setFlightTargetBiome] = useState('mixed');
+      const [flightSlowed, setFlightSlowed] = useState(false); // slowed down by clouds
+      const [flightFlash, setFlightFlash] = useState(false); // screen flash on cloud hit
+
+      const flightYRef = useRef(50);
+      const flightEarnedGoldRef = useRef(0);
+      const flightEarnedBallsRef = useRef({ greatball: 0, ultraball: 0 });
+      const flightSlowedRef = useRef(false);
+
+      // Keep refs updated
+      useEffect(() => {
+        flightYRef.current = flightY;
+      }, [flightY]);
+      useEffect(() => {
+        flightEarnedGoldRef.current = flightEarnedGold;
+      }, [flightEarnedGold]);
+      useEffect(() => {
+        flightEarnedBallsRef.current = flightEarnedBalls;
+      }, [flightEarnedBalls]);
+      useEffect(() => {
+        flightSlowedRef.current = flightSlowed;
+      }, [flightSlowed]);
+
+      const getFlyingMountForBuddy = (buddy) => {
+        if (!buddy) return { name: '망나뇽', sprite: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/149.png', isCustom: false };
+        const nameKo = buddy.koreanName;
+        const nameEn = buddy.name.toLowerCase();
+        const isFlyerType = buddy.types.some(t => t.toLowerCase() === 'flying');
+        const flyableList = [
+          'charizard', 'butterfree', 'pidgeot', 'fearow', 'golbat', 'gyarados', 'aerodactyl',
+          'articuno', 'zapdos', 'moltres', 'dragonite', 'crobat', 'togetic', 'natu', 'xatu',
+          'murkrow', 'yanma', 'gligar', 'skarmory', 'mantine', 'lugia', 'ho-oh', 'celebi', 'mewtwo', 'mew'
+        ];
+        if (isFlyerType || flyableList.includes(nameEn)) {
+          return {
+            name: nameKo,
+            sprite: buddy.sprites.front_default || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${buddy.id}.png`,
+            isCustom: true
+          };
+        }
+        return {
+          name: '망나뇽',
+          sprite: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/149.png',
+          isCustom: false
+        };
+      };
+
+      const handleFlightComplete = () => {
+        const finalGold = flightEarnedGoldRef.current;
+        const finalBalls = flightEarnedBallsRef.current;
+        if (finalGold > 0) {
+          addPlayerGold(finalGold);
+          setGold(getPlayerGold());
+        }
+        if (finalBalls.greatball > 0 || finalBalls.ultraball > 0) {
+          const inv = getBallInventory();
+          inv.greatball = (inv.greatball || 0) + finalBalls.greatball;
+          inv.ultraball = (inv.ultraball || 0) + finalBalls.ultraball;
+          localStorage.setItem('pokemon_balls', JSON.stringify(inv));
+          setBallInventory(inv);
+        }
+        setView('explore');
+      };
+
+      // Flying Transit Loop
+      useEffect(() => {
+        if (view !== 'flying-transit') return;
+
+        let tick = 0;
+        let slowedStateTimeout = null;
+
+        const handleFlightKeyDown = (e) => {
+          if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+            e.preventDefault();
+            setFlightY(prev => Math.max(10, prev - 7));
+          } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+            e.preventDefault();
+            setFlightY(prev => Math.min(90, prev + 7));
+          }
+        };
+        window.addEventListener('keydown', handleFlightKeyDown);
+
+        const interval = setInterval(() => {
+          tick++;
+
+          let currentProgress = 0;
+          setFlightProgress(prev => {
+            const step = flightSlowedRef.current ? 0.35 : 0.75;
+            const next = prev + step;
+            currentProgress = next;
+            return next >= 100 ? 100 : next;
+          });
+
+          if (currentProgress >= 100) {
+            clearInterval(interval);
+            handleFlightComplete();
+            return;
+          }
+
+          if (tick % 25 === 0) {
+            setFlightObjects(prev => {
+              const rand = Math.random();
+              let type = 'coin';
+              if (rand < 0.20) {
+                type = 'cloud';
+              } else if (rand < 0.35) {
+                type = 'ball';
+              }
+              const newObj = {
+                id: Math.random().toString(36).substr(2, 9),
+                x: 100,
+                y: Math.floor(Math.random() * 70) + 15,
+                type
+              };
+              return [...prev, newObj];
+            });
+          }
+
+          setFlightObjects(prevObjects => {
+            const speed = flightSlowedRef.current ? 1.2 : 2.5;
+            const moved = prevObjects.map(obj => ({
+              ...obj,
+              x: obj.x - speed
+            }));
+            const playerX = 20;
+            const playerY = flightYRef.current;
+            const remaining = [];
+            for (let obj of moved) {
+              const dx = Math.abs(obj.x - playerX);
+              const dy = Math.abs(obj.y - playerY);
+              if (dx < 5 && dy < 8) {
+                if (obj.type === 'coin') {
+                  sound.playTone(850, 'sine', 0.05, 0, 0.02);
+                  setFlightEarnedGold(g => g + 5);
+                } else if (obj.type === 'ball') {
+                  sound.playTone(600, 'sine', 0.08, 0, 0.03);
+                  const isUltra = Math.random() < 0.25;
+                  setFlightEarnedBalls(b => {
+                    const next = { ...b };
+                    if (isUltra) next.ultraball += 1;
+                    else next.greatball += 1;
+                    return next;
+                  });
+                } else if (obj.type === 'cloud') {
+                  sound.playTone(130, 'sawtooth', 0.25, 0, 0.1);
+                  setFlightFlash(true);
+                  setTimeout(() => setFlightFlash(false), 150);
+                  setFlightSlowed(true);
+                  if (slowedStateTimeout) clearTimeout(slowedStateTimeout);
+                  slowedStateTimeout = setTimeout(() => {
+                    setFlightSlowed(false);
+                  }, 1200);
+                }
+              } else if (obj.x > -10) {
+                remaining.push(obj);
+              }
+            }
+            return remaining;
+          });
+        }, 50);
+
+        return () => {
+          clearInterval(interval);
+          window.removeEventListener('keydown', handleFlightKeyDown);
+          if (slowedStateTimeout) clearTimeout(slowedStateTimeout);
+        };
+      }, [view]);
 
       // ==================== CHAMPIONSHIP STATES ====================
       const [champTeam, setChampTeam] = useState([]); // [{id, pokemonData}] - 선택한 5마리
@@ -4146,11 +4361,22 @@
                                 else if (exploreSelectedBiome === 'volcano') targetMap = VOLCANO_MAP;
                                 else if (exploreSelectedBiome === 'cave') targetMap = CAVE_MAP;
 
+                                const mount = getFlyingMountForBuddy(buddy);
+                                setFlightMount(mount);
+                                setFlightY(50);
+                                setFlightProgress(0);
+                                setFlightObjects([]);
+                                setFlightEarnedGold(0);
+                                setFlightEarnedBalls({ greatball: 0, ultraball: 0 });
+                                setFlightTargetBiome(exploreSelectedBiome);
+                                setFlightSlowed(false);
+                                setFlightFlash(false);
+
                                 setExploreMap(targetMap);
                                 setExploreBuddy(buddy);
                                 setExploreX(2);
                                 setExploreY(2);
-                                setView('explore');
+                                setView('flying-transit');
                               } catch (e) {
                                 console.error("Explore entry error:", e);
                                 setExploreMap(MIX_MAP);
@@ -5698,6 +5924,153 @@
                       </button>
                     </>
                   )}
+                </div>
+              )}
+
+              {/* ROUTER VIEW: 7.5 FLYING TRANSIT MINIGAME */}
+              {view === 'flying-transit' && (
+                <div className={`flex-1 flex flex-col p-3 md:p-4 w-full relative z-20 justify-between select-none overflow-hidden bg-gradient-to-b from-sky-900 via-sky-800 to-indigo-950 crt-effect ${flightFlash ? 'bg-white' : ''}`}>
+                  {/* Cloud Flash Overlay when hit by lightning cloud */}
+                  {flightFlash && (
+                    <div className="absolute inset-0 bg-white z-50 pointer-events-none opacity-80 animate-flash-blink" />
+                  )}
+                  
+                  {/* Sky Parallax Layers */}
+                  <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+                    <div className="absolute top-8 left-0 right-0 h-16 bg-[repeat-x] animate-cloud-scroll-slow" style={{ backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"50\" viewBox=\"0 0 200 50\"><path d=\"M20 20a15 15 0 0 1 30 0a15 15 0 0 1 20-5a15 15 0 0 1 30 5a15 15 0 0 1 20 0a15 15 0 0 1 30-5a15 15 0 0 1 20 5h-150z\" fill=\"%23ffffff\"/></svg>')", backgroundSize: "200px 50px" }} />
+                    <div className="absolute top-24 left-0 right-0 h-16 bg-[repeat-x] animate-cloud-scroll-fast" style={{ backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"50\" viewBox=\"0 0 200 50\"><path d=\"M20 30a10 10 0 0 1 20 0a10 10 0 0 1 15-5a10 10 0 0 1 20 5a10 10 0 0 1 15 0a10 10 0 0 1 20-5a10 10 0 0 1 15 5h-105z\" fill=\"%23ffffff\"/></svg>')", backgroundSize: "200px 50px", opacity: 0.7 }} />
+                  </div>
+
+                  {/* Top Header Panel */}
+                  <header className="flex justify-between items-center border-b border-sky-700/50 pb-2 mb-2 shrink-0 z-10 bg-slate-900/60 p-2 rounded backdrop-blur-sm">
+                    <div className="text-left flex-1 pr-4">
+                      <h2 className="font-pixel text-[9px] text-poke-yellow font-black animate-pulse flex items-center gap-1">
+                        🦅 {(() => {
+                          if (flightTargetBiome === 'forest') return "싱그러운 풀숲 (Forest)";
+                          if (flightTargetBiome === 'ocean') return "끝없는 해양 (Ocean)";
+                          if (flightTargetBiome === 'volcano') return "불타는 화산 (Volcano)";
+                          if (flightTargetBiome === 'cave') return "험난한 동굴 (Cave)";
+                          return "혼합 월드 (Mixed World)";
+                        })()}으로 날아가는 중!
+                      </h2>
+                      <div className="w-full bg-slate-950 h-1.5 rounded-full mt-1.5 border border-sky-600/30 overflow-hidden relative">
+                        <div 
+                          className="bg-gradient-to-r from-sky-400 to-emerald-400 h-full rounded-full transition-all duration-100 shadow-[0_0_8px_rgba(56,189,248,0.5)]"
+                          style={{ width: `${flightProgress}%` }}
+                        />
+                        <span className="absolute right-1.5 -top-[2px] font-pixel text-[6px] font-black text-slate-400">{Math.floor(flightProgress)}%</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-1.5 shrink-0">
+                      <div className="bg-slate-950/80 border border-amber-500/30 px-2 py-1 rounded text-center">
+                        <span className="font-pixel text-[5.5px] text-amber-500 block">코인 골드</span>
+                        <span className="font-pixel text-[8.5px] font-black text-white">🪙 +{flightEarnedGold}</span>
+                      </div>
+                      <div className="bg-slate-950/80 border border-sky-500/30 px-2 py-1 rounded text-center">
+                        <span className="font-pixel text-[5.5px] text-sky-400 block">획득 포켓몬볼</span>
+                        <span className="font-pixel text-[8.5px] font-black text-white">
+                          🔵 {flightEarnedBalls.greatball + flightEarnedBalls.ultraball}
+                        </span>
+                      </div>
+                    </div>
+                  </header>
+
+                  {/* Main Sky Area */}
+                  <main className="flex-1 w-full bg-slate-950/40 rounded-lg border border-sky-800/30 relative overflow-hidden my-1">
+                    {/* Slow warning overlay */}
+                    {flightSlowed && (
+                      <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-30 bg-rose-600/90 text-white font-pixel text-[7.5px] font-bold px-2 py-0.5 rounded shadow-pixel animate-bounce">
+                        ⚡ 번개 구름에 충돌! 속도 저하!
+                      </div>
+                    )}
+                    
+                    {/* Sky grid lines to give high speed feel */}
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:30px_100%] animate-speed-lines" />
+
+                    {/* Flight Mount Player (bobbing animation) */}
+                    <div 
+                      className="absolute left-[15%] w-16 h-16 flex items-center justify-center pointer-events-none z-20"
+                      style={{ 
+                        top: `${flightY}%`, 
+                        transform: 'translateY(-50%)',
+                        transition: 'top 0.15s ease-out' 
+                      }}
+                    >
+                      <div className="relative animate-flight-bob flex flex-col items-center">
+                        {/* Rider Sprite (🚶) */}
+                        <span className="absolute -top-1.5 text-[10px] sm:text-xs z-30 animate-bounce" style={{ animationDuration: '0.8s' }}>🚶</span>
+                        
+                        {/* Mount Sprite */}
+                        {flightMount && (
+                          <img 
+                            src={flightMount.sprite} 
+                            alt={flightMount.name} 
+                            className="w-14 h-14 pixelated filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.5)] transform scale-x-[-1]"
+                          />
+                        )}
+                        
+                        {/* Wind/Speed Particle Trails */}
+                        <div className="absolute -left-2 top-6 w-4 h-0.5 bg-white/40 rounded-full animate-wind-trail" />
+                        <div className="absolute -left-4 top-9 w-6 h-0.5 bg-white/30 rounded-full animate-wind-trail" style={{ animationDelay: '0.15s' }} />
+                        <div className="absolute -left-1 top-4 w-3 h-0.5 bg-white/50 rounded-full animate-wind-trail" style={{ animationDelay: '0.05s' }} />
+                      </div>
+                    </div>
+
+                    {/* Spawned Objects (Stars, Boxes, Clouds) */}
+                    {flightObjects.map(obj => {
+                      let objChar = "⭐";
+                      if (obj.type === 'ball') {
+                        objChar = "📦";
+                      } else if (obj.type === 'cloud') {
+                        objChar = "🌩️";
+                      }
+                      
+                      return (
+                        <div
+                          key={obj.id}
+                          className={`absolute w-6 h-6 flex items-center justify-center z-10 font-pixel text-[11px] select-none pointer-events-none`}
+                          style={{
+                            left: `${obj.x}%`,
+                            top: `${obj.y}%`,
+                            transform: 'translate(-50%, -50%)',
+                            transition: 'left 0.05s linear'
+                          }}
+                        >
+                          {objChar}
+                        </div>
+                      );
+                    })}
+                  </main>
+
+                  {/* Controls / Footer */}
+                  <footer className="w-full mt-2 shrink-0 z-10">
+                    <div className="flex justify-between items-center bg-slate-900/60 p-2 rounded backdrop-blur-sm border border-sky-700/20">
+                      <div className="text-left font-pixel text-[7.5px] text-slate-400 leading-relaxed">
+                        <p className="text-sky-300 font-bold mb-0.5 uppercase text-[8px]">조작 방법</p>
+                        <p>키보드 방향키 <span className="text-white font-bold">▲/▼</span> 또는 <span className="text-white font-bold">W/S</span> 키로 비행 고도를 조절하세요!</p>
+                        <p>장애물(먹구름 🌩️)을 피하고 별(⭐)과 아이템 상자(📦)를 수집하세요!</p>
+                      </div>
+                      
+                      {/* Mobile D-Pad Panel (Bobbing arrows for touch controls) */}
+                      <div className="flex gap-1.5 shrink-0 select-none">
+                        <button
+                          onMouseDown={() => setFlightY(prev => Math.max(10, prev - 12))}
+                          onTouchStart={() => setFlightY(prev => Math.max(10, prev - 12))}
+                          className="w-9 h-9 active:bg-sky-500/30 bg-slate-800/80 hover:bg-slate-700 border border-sky-500/30 text-sky-400 font-bold rounded flex items-center justify-center font-pixel text-[13px] cursor-pointer transform active:scale-95 transition-all shadow-[inset_0_2px_4px_rgba(255,255,255,0.05)]"
+                        >
+                          ▲
+                        </button>
+                        <button
+                          onMouseDown={() => setFlightY(prev => Math.min(90, prev + 12))}
+                          onTouchStart={() => setFlightY(prev => Math.min(90, prev + 12))}
+                          className="w-9 h-9 active:bg-sky-500/30 bg-slate-800/80 hover:bg-slate-700 border border-sky-500/30 text-sky-400 font-bold rounded flex items-center justify-center font-pixel text-[13px] cursor-pointer transform active:scale-95 transition-all shadow-[inset_0_2px_4px_rgba(255,255,255,0.05)]"
+                        >
+                          ▼
+                        </button>
+                      </div>
+                    </div>
+                  </footer>
                 </div>
               )}
 
