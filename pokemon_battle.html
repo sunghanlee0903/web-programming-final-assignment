@@ -854,9 +854,9 @@
       try { localStorage.setItem(CHAMP_COUNT_KEY, String(getChampionshipWins() + 1)); } catch(e) {}
     };
 
-    // 2D Grid Explore Map (15 columns x 12 rows)
+    // 2D Grid Explore Map configurations (15 columns x 12 rows)
     // 0: Road, 1: Grass, 2: Water, 3: Cave, 4: Volcano, 9: Tree (obstacle)
-    const EXPLORE_MAP = [
+    const MIX_MAP = [
       [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
       [9, 0, 0, 0, 9, 1, 1, 1, 9, 3, 3, 3, 9, 4, 9],
       [9, 0, 0, 0, 0, 1, 1, 1, 0, 3, 3, 3, 0, 4, 9],
@@ -870,6 +870,86 @@
       [9, 1, 1, 1, 9, 4, 4, 4, 9, 1, 1, 1, 9, 9, 9],
       [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
     ];
+
+    const FOREST_MAP = [
+      [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+      [9, 0, 0, 0, 9, 1, 1, 1, 1, 1, 9, 1, 1, 1, 9],
+      [9, 0, 0, 0, 0, 1, 1, 9, 1, 1, 0, 1, 9, 1, 9],
+      [9, 0, 0, 1, 9, 1, 9, 9, 9, 1, 9, 1, 9, 1, 9],
+      [9, 9, 0, 1, 1, 1, 1, 9, 1, 1, 1, 1, 1, 1, 9],
+      [9, 1, 1, 1, 9, 9, 1, 1, 1, 9, 9, 1, 9, 1, 9],
+      [9, 1, 9, 1, 1, 9, 9, 0, 9, 9, 1, 1, 9, 1, 9],
+      [9, 1, 9, 9, 1, 1, 1, 0, 1, 1, 1, 9, 9, 1, 9],
+      [9, 1, 1, 9, 9, 9, 1, 9, 9, 1, 9, 9, 1, 1, 9],
+      [9, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 9],
+      [9, 1, 9, 1, 9, 1, 9, 1, 9, 1, 9, 1, 9, 9, 9],
+      [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+    ];
+
+    const OCEAN_MAP = [
+      [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+      [9, 0, 0, 0, 9, 2, 2, 2, 2, 2, 9, 2, 2, 0, 9],
+      [9, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 2, 2, 0, 9],
+      [9, 0, 0, 0, 9, 9, 2, 9, 2, 9, 9, 2, 9, 2, 9],
+      [9, 9, 0, 9, 2, 2, 2, 9, 2, 2, 2, 2, 2, 2, 9],
+      [9, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 2, 9],
+      [9, 2, 2, 2, 2, 9, 9, 0, 9, 9, 2, 2, 9, 2, 9],
+      [9, 9, 0, 9, 9, 2, 2, 0, 2, 2, 9, 9, 9, 9, 9],
+      [9, 2, 2, 2, 9, 2, 2, 2, 2, 2, 9, 2, 2, 0, 9],
+      [9, 2, 2, 2, 0, 2, 2, 2, 0, 2, 2, 2, 0, 0, 9],
+      [9, 2, 2, 2, 9, 2, 2, 2, 9, 2, 2, 2, 9, 9, 9],
+      [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+    ];
+
+    const CAVE_MAP = [
+      [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+      [9, 0, 0, 0, 9, 3, 3, 3, 9, 3, 3, 3, 9, 3, 9],
+      [9, 0, 0, 0, 0, 3, 3, 3, 0, 3, 3, 3, 0, 3, 9],
+      [9, 0, 0, 0, 9, 3, 9, 3, 9, 3, 9, 3, 9, 3, 9],
+      [9, 9, 0, 9, 9, 3, 0, 3, 9, 3, 0, 3, 9, 3, 9],
+      [9, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 3, 9],
+      [9, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 9, 3, 9],
+      [9, 9, 0, 9, 9, 9, 0, 9, 9, 9, 0, 9, 9, 9, 9],
+      [9, 3, 3, 3, 9, 3, 3, 3, 9, 3, 3, 3, 9, 0, 9],
+      [9, 3, 3, 3, 0, 3, 3, 3, 0, 3, 3, 3, 0, 0, 9],
+      [9, 3, 3, 3, 9, 3, 3, 3, 9, 3, 3, 3, 9, 9, 9],
+      [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+    ];
+
+    const VOLCANO_MAP = [
+      [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+      [9, 0, 0, 0, 9, 4, 4, 4, 9, 4, 4, 4, 9, 4, 9],
+      [9, 0, 0, 0, 0, 4, 4, 4, 0, 4, 4, 4, 0, 4, 9],
+      [9, 0, 0, 0, 9, 4, 4, 4, 9, 4, 4, 4, 9, 4, 9],
+      [9, 9, 0, 9, 9, 9, 0, 9, 9, 9, 0, 9, 9, 4, 9],
+      [9, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 4, 9],
+      [9, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 9, 4, 9],
+      [9, 9, 0, 9, 9, 9, 0, 9, 9, 9, 0, 9, 9, 9, 9],
+      [9, 4, 4, 4, 9, 4, 4, 4, 9, 4, 4, 4, 9, 0, 9],
+      [9, 4, 4, 4, 0, 4, 4, 4, 0, 4, 4, 4, 0, 0, 9],
+      [9, 4, 4, 4, 9, 4, 4, 4, 9, 4, 4, 4, 9, 9, 9],
+      [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+    ];
+
+    const getExploreMapForBuddy = (buddy) => {
+      if (!buddy || !buddy.types || buddy.types.length === 0) {
+        return MIX_MAP;
+      }
+      const types = buddy.types.map(t => t.toLowerCase());
+      if (types.includes('grass') || types.includes('bug')) {
+        return FOREST_MAP;
+      }
+      if (types.includes('water') || types.includes('ice')) {
+        return OCEAN_MAP;
+      }
+      if (types.includes('fire')) {
+        return VOLCANO_MAP;
+      }
+      if (types.includes('rock') || types.includes('ground') || types.includes('steel') || types.includes('ghost') || types.includes('poison')) {
+        return CAVE_MAP;
+      }
+      return MIX_MAP;
+    };
 
     const EXPLORE_BIOME_POKEMON = {
       // Grass (풀숲 🌿)
@@ -2020,6 +2100,9 @@
       const [exploreY, setExploreY] = useState(2); // Initial player position Y (road)
       const [exploreEncountering, setExploreEncountering] = useState(false); // encounter screen flash animation
       const [exploreCapturedNew, setExploreCapturedNew] = useState(false);
+      const [exploreMap, setExploreMap] = useState(MIX_MAP);
+      const [exploreBuddy, setExploreBuddy] = useState(null);
+      const [exploreEncounterBiome, setExploreEncounterBiome] = useState(null);
 
       // ==================== CHAMPIONSHIP STATES ====================
       const [champTeam, setChampTeam] = useState([]); // [{id, pokemonData}] - 선택한 5마리
@@ -2953,6 +3036,7 @@
         if (exploreActive) {
           setView('explore');
           setExploreActive(false);
+          setExploreEncounterBiome(null);
         } else {
           setView('select');
         }
@@ -2990,6 +3074,7 @@
 
       // Trigger Explore Wild Encounter
       const triggerExploreEncounter = async (tileType) => {
+        setExploreEncounterBiome(tileType);
         setExploreEncountering(true);
         sound.playTone(120, 'sawtooth', 0.1, 0, 0.05);
         sound.playTone(80, 'sawtooth', 0.1, 0.1, 0.05);
@@ -3102,7 +3187,7 @@
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-      }, [view, exploreX, exploreY, exploreEncountering]);
+      }, [view, exploreX, exploreY, exploreEncountering, exploreMap]);
 
       const handleRetrySame = () => {
         sound.playSelect();
@@ -3697,9 +3782,31 @@
                         )}
                       </button>
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           sound.playSelect();
-                          setView('explore');
+                          setLoadingDetails(true);
+                          try {
+                            let buddy = selectedPokemon;
+                            const activeId = selectedPokemon ? selectedPokemon.id : (unlockedIds.includes(equippedBall) ? equippedBall : unlockedIds[0] || 1);
+                            if (!buddy || buddy.id !== activeId) {
+                              buddy = await fetchPokemonDetails(activeId);
+                            }
+                            const targetMap = getExploreMapForBuddy(buddy);
+                            setExploreMap(targetMap);
+                            setExploreBuddy(buddy);
+                            setExploreX(2);
+                            setExploreY(2);
+                            setView('explore');
+                          } catch (e) {
+                            console.error("Explore entry error:", e);
+                            setExploreMap(MIX_MAP);
+                            setExploreBuddy(null);
+                            setExploreX(2);
+                            setExploreY(2);
+                            setView('explore');
+                          } finally {
+                            setLoadingDetails(false);
+                          }
                         }}
                         className="flex-1 sm:flex-none px-6 py-3 font-pixel text-[9px] font-black rounded border transition shadow-pixel cursor-pointer flex items-center justify-center gap-2 transform active:translate-y-0.5 select-none bg-gradient-to-r from-emerald-600 to-teal-500 text-slate-950 border-emerald-400 hover:from-emerald-500 hover:to-teal-400"
                       >
