@@ -2174,7 +2174,9 @@
             speed: statsMap['speed'] || 50,
           },
           types: tps,
-          moves: getMovesForPokemon(tps)
+          moves: getMovesForPokemon(tps),
+          height: apiData.height,
+          weight: apiData.weight
         };
       };
 
@@ -2298,6 +2300,52 @@
       const [flightTargetBiome, setFlightTargetBiome] = useState('mixed');
       const [flightSlowed, setFlightSlowed] = useState(false); // slowed down by clouds
       const [flightFlash, setFlightFlash] = useState(false); // screen flash on cloud hit
+
+      // Selectable flying mounts states
+      const [eligibleMounts, setEligibleMounts] = useState([]);
+      const [selectedMountId, setSelectedMountId] = useState(null);
+      const [loadingMounts, setLoadingMounts] = useState(false);
+
+      // Effect to load eligible flying mounts when the biome select modal opens
+      useEffect(() => {
+        if (!exploreBiomeModalOpen) return;
+        
+        const loadEligibleMounts = async () => {
+          setLoadingMounts(true);
+          try {
+            // 24 candidate flyable pokemon IDs from Gen 1-2
+            const candidateIds = [6, 12, 18, 22, 41, 42, 130, 142, 144, 145, 146, 149, 150, 169, 176, 177, 178, 193, 207, 226, 227, 249, 250, 251];
+            const ownedCandidates = unlockedIds.filter(id => candidateIds.includes(id));
+            
+            const detailsList = await Promise.all(ownedCandidates.map(async (id) => {
+              try {
+                return await fetchPokemonDetails(id);
+              } catch (e) {
+                console.error(`Error loading mount ${id}:`, e);
+                return null;
+              }
+            }));
+            
+            // Filter by size constraints: height >= 10 dm (1.0m) and weight >= 200 hg (20.0kg)
+            const eligible = detailsList.filter(p => p !== null && p.height >= 10 && p.weight >= 200);
+            setEligibleMounts(eligible);
+            
+            if (eligible.length > 0) {
+              if (!selectedMountId || !eligible.some(m => m.id === selectedMountId)) {
+                setSelectedMountId(eligible[0].id);
+              }
+            } else {
+              setSelectedMountId(null);
+            }
+          } catch (err) {
+            console.error("Error loading eligible mounts:", err);
+          } finally {
+            setLoadingMounts(false);
+          }
+        };
+        
+        loadEligibleMounts();
+      }, [exploreBiomeModalOpen, unlockedIds]);
 
       const flightYRef = useRef(50);
       const flightEarnedGoldRef = useRef(0);
@@ -4335,6 +4383,53 @@
                           })()}
                         </main>
 
+                        {/* Flying Mount Selection Section */}
+                        <div className="mt-3 border-t border-slate-800 pt-3 text-left shrink-0">
+                          <label className="font-pixel text-[8px] text-sky-400 font-bold block mb-1">
+                            🦅 비행 이동 탑승 포켓몬 선택 (SELECT MOUNT)
+                          </label>
+                          
+                          {loadingMounts ? (
+                            <div className="font-pixel text-[7px] text-slate-500 py-2 animate-pulse">
+                              탑승 가능한 포켓몬 목록 조회 중...
+                            </div>
+                          ) : eligibleMounts.length === 0 ? (
+                            <div className="bg-slate-950/40 p-2 rounded border border-slate-900 text-[6.5px] font-pixel text-slate-500 italic">
+                              탑승 가능 규격(키 1.0m 이상, 몸무게 20kg 이상 비행 타입) 포켓몬이 없습니다.
+                              (기본 비행 셔틀 망나뇽 🐉 탑승)
+                            </div>
+                          ) : (
+                            <div className="flex gap-2 overflow-x-auto pb-1 max-w-full">
+                              {eligibleMounts.map(m => {
+                                const isChosen = selectedMountId === m.id;
+                                const heightM = (m.height / 10).toFixed(1);
+                                const weightKg = (m.weight / 10).toFixed(1);
+                                return (
+                                  <div
+                                    key={m.id}
+                                    onClick={() => { sound.playSelect(); setSelectedMountId(m.id); }}
+                                    className={`flex items-center gap-1.5 p-1 px-2 rounded border-2 cursor-pointer transition transform active:scale-95 shrink-0 ${
+                                      isChosen 
+                                        ? 'border-sky-500 bg-sky-950/40 shadow-[0_0_8px_rgba(56,189,248,0.3)]' 
+                                        : 'border-slate-800 bg-slate-950/20 opacity-80 hover:opacity-100'
+                                    }`}
+                                  >
+                                    <img src={m.sprites.front_default} alt={m.koreanName} className="w-6 h-6 pixelated" />
+                                    <div>
+                                      <span className="font-pixel text-[7px] font-bold text-white block">
+                                        {m.koreanName}
+                                      </span>
+                                      <span className="font-pixel text-[5.5px] text-slate-400 block">
+                                        {heightM}m / {weightKg}kg
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
                         <footer className="mt-4 flex gap-2 shrink-0">
                           <button
                             onClick={() => { sound.playSelect(); setExploreBiomeModalOpen(false); }}
@@ -4361,7 +4456,20 @@
                                 else if (exploreSelectedBiome === 'volcano') targetMap = VOLCANO_MAP;
                                 else if (exploreSelectedBiome === 'cave') targetMap = CAVE_MAP;
 
-                                const mount = getFlyingMountForBuddy(buddy);
+                                let mount = null;
+                                if (selectedMountId) {
+                                  const chosen = eligibleMounts.find(m => m.id === selectedMountId);
+                                  if (chosen) {
+                                    mount = {
+                                      name: chosen.koreanName,
+                                      sprite: chosen.sprites.front_default,
+                                      isCustom: true
+                                    };
+                                  }
+                                }
+                                if (!mount) {
+                                  mount = getFlyingMountForBuddy(buddy);
+                                }
                                 setFlightMount(mount);
                                 setFlightY(50);
                                 setFlightProgress(0);
