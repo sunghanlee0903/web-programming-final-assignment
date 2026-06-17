@@ -2201,6 +2201,7 @@
       const [gold, setGold] = useState(() => getPlayerGold());
       const [earnedGold, setEarnedGold] = useState(0);
       const [gachaResult, setGachaResult] = useState(null);
+      const [gachaResultsTen, setGachaResultsTen] = useState(null);
       const [isDrawing, setIsDrawing] = useState(false);
       const [showRates, setShowRates] = useState(false);
       const [drawCount, setDrawCount] = useState(() => getGachaDrawCount());
@@ -3127,6 +3128,55 @@
             sound.playVictory();
           } catch (err) {
             console.error('Failed to fetch drawn Pokemon', err);
+          } finally {
+            setIsDrawing(false);
+          }
+        }, 1200);
+      };
+
+      // 10x Summons (Gacha) execution
+      const handleDrawGachaTen = async () => {
+        if (isDrawing) return;
+        if (gold < 100) return;
+        setIsDrawing(true);
+        sound.playTone(400, 'sine', 0.15, 0, 0.05);
+
+        // Smooth gacha machine shake feel
+        setTimeout(async () => {
+          const results = [];
+          for (let i = 0; i < 10; i++) {
+            const result = drawRandomPokemon(false);
+            if (result === -2) {
+              break;
+            }
+            results.push(result);
+          }
+
+          try {
+            // Fetch all drawn pokemon details concurrently
+            const detailedResults = await Promise.all(
+              results.map(async (r) => {
+                const details = await fetchPokemonDetails(r.id);
+                return {
+                  ...r,
+                  pokemon: details
+                };
+              })
+            );
+
+            // Unlocked Success! Refresh lists
+            setUnlockedIds(getUnlockedPokemonIds());
+            setGold(getPlayerGold());
+            setDrawCount(getGachaDrawCount());
+            setTickets(getEpicTickets());
+
+            setGachaResultsTen(detailedResults);
+
+            // Play victory tone!
+            sound.playSuperEffective();
+            sound.playVictory();
+          } catch (err) {
+            console.error('Failed to fetch drawn Pokemon for 10x summon', err);
           } finally {
             setIsDrawing(false);
           }
@@ -4064,32 +4114,52 @@
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 z-10 mt-auto">
-                          {/* Gold Summon */}
-                          <button
-                            onClick={() => handleDrawGacha(false)}
-                            disabled={isDrawing || gold < 10}
-                            className={`px-2 py-2 font-pixel text-[8.5px] font-black rounded border-2 transition shadow-pixel cursor-pointer flex flex-col items-center justify-center gap-1 transform active:translate-y-0.5 disabled:pointer-events-none disabled:opacity-40 ${
-                              gold >= 10
-                                ? 'bg-gradient-to-r from-indigo-500 to-purple-650 text-slate-100 border-indigo-400 shadow-indigo-500/25 hover:from-indigo-600 hover:to-purple-750 shadow-pixelGlow'
-                                : 'bg-slate-800 text-slate-550 border-slate-700'
-                            }`}
-                          >
-                            {isDrawing ? (
-                              <span className="animate-spin text-sm">🌀</span>
-                            ) : (
-                              <>
-                                <span>🪙 10G로 뽑기</span>
-                                <span className="text-[6px] text-indigo-300 font-bold">누적: {drawCount}/30 회</span>
-                              </>
-                            )}
-                          </button>
+                        <div className="grid grid-cols-2 gap-2 z-10 mt-auto items-end">
+                          {/* Gold Summon (1x and 10x) */}
+                          <div className="flex flex-col gap-1.5 justify-end">
+                            {/* 1x Gold Summon */}
+                            <button
+                              onClick={() => handleDrawGacha(false)}
+                              disabled={isDrawing || gold < 10}
+                              className={`w-full py-1.5 font-pixel text-[8px] font-black rounded border-2 transition shadow-pixel cursor-pointer flex flex-col items-center justify-center gap-0.5 transform active:translate-y-0.5 disabled:pointer-events-none disabled:opacity-40 ${
+                                gold >= 10
+                                  ? 'bg-gradient-to-r from-indigo-500 to-purple-650 text-slate-100 border-indigo-400 shadow-indigo-500/25 hover:from-indigo-600 hover:to-purple-750 shadow-pixelGlow'
+                                  : 'bg-slate-800 text-slate-550 border-slate-700'
+                              }`}
+                            >
+                              {isDrawing ? (
+                                <span className="animate-spin text-xs">🌀</span>
+                              ) : (
+                                <>
+                                  <span>🪙 10G로 뽑기</span>
+                                  <span className="text-[5.5px] text-indigo-300 font-bold">누적: {drawCount}/30 회</span>
+                                </>
+                              )}
+                            </button>
+
+                            {/* 10x Gold Summon */}
+                            <button
+                              onClick={() => handleDrawGachaTen()}
+                              disabled={isDrawing || gold < 100}
+                              className={`w-full py-1 font-pixel text-[7px] font-bold rounded border transition shadow-pixel cursor-pointer flex items-center justify-center gap-1 transform active:translate-y-0.5 disabled:pointer-events-none disabled:opacity-40 ${
+                                gold >= 100
+                                  ? 'bg-gradient-to-r from-violet-600 to-fuchsia-700 text-slate-100 border-violet-400 shadow-violet-500/25 hover:from-violet-700 hover:to-fuchsia-850'
+                                  : 'bg-slate-800/80 text-slate-550 border-slate-750'
+                              }`}
+                            >
+                              {isDrawing ? (
+                                <span className="animate-spin text-[8px]">🌀</span>
+                              ) : (
+                                <span>✨ 10연 뽑기 (100G)</span>
+                              )}
+                            </button>
+                          </div>
 
                           {/* Ticket Summon */}
                           <button
                             onClick={() => handleDrawGacha(true)}
                             disabled={isDrawing || tickets < 1}
-                            className={`px-2 py-2 font-pixel text-[8.5px] font-black rounded border-2 transition shadow-pixel cursor-pointer flex flex-col items-center justify-center gap-1 transform active:translate-y-0.5 disabled:pointer-events-none disabled:opacity-40 ${
+                            className={`px-2 py-2 font-pixel text-[8.5px] font-black rounded border-2 transition shadow-pixel cursor-pointer flex flex-col items-center justify-center gap-1 transform active:translate-y-0.5 disabled:pointer-events-none disabled:opacity-40 h-full justify-center ${
                               tickets >= 1
                                 ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 border-amber-300 shadow-amber-500/25 hover:from-amber-600 hover:to-orange-650 shadow-pixelGlow animate-pulse'
                                 : 'bg-slate-855 text-slate-555 border-slate-800'
@@ -4575,6 +4645,96 @@
                             className={`w-full py-3 ${style.btnStyle} font-pixel text-[9.5px] font-black rounded border-2 transition shadow-pixel cursor-pointer flex items-center justify-center gap-1 transform active:translate-y-0.5`}
                           >
                             도감 닫기 (CLOSE)
+                          </button>
+
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* 10x SUMMON SUCCESS OVERLAY MODAL */}
+                  {gachaResultsTen && (() => {
+                    const ticketsEarned = gachaResultsTen.filter(r => r.ticketEarned).length;
+                    return (
+                      <div className="fixed inset-0 flex items-center justify-center backdrop-blur-md p-4 z-50 bg-slate-950/80 select-none animate-fadeIn">
+                        <div className="max-w-4xl w-full bg-[#0c101f] border-4 border-indigo-500 rounded-lg p-5 shadow-[0_0_30px_rgba(99,102,241,0.3)] text-center flex flex-col items-center relative overflow-hidden crt-effect animate-scaleIn">
+                          <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] opacity-[0.02] pointer-events-none" />
+                          
+                          <span className="text-4xl mb-1 animate-bounce">🔮</span>
+                          <h2 className="text-[12px] font-pixel text-poke-yellow tracking-widest animate-pulse font-black uppercase mb-1">
+                            10X POKÉMON SUMMON RESULTS
+                          </h2>
+                          <p className="text-[7.5px] font-pixel text-slate-400 font-bold mb-3 uppercase tracking-wide border-b border-indigo-900/50 pb-1.5 w-full">
+                            10연속 뽑기 결과 정보 (이미 보유한 포켓몬은 자동으로 레벨업되었습니다!)
+                          </p>
+
+                          {ticketsEarned > 0 && (
+                            <div className="mb-3 px-2 py-1 bg-amber-500/20 border border-amber-500 text-amber-200 rounded font-pixel text-[7.5px] animate-pulse w-full max-w-md">
+                              🎉 30회 누적 뽑기 달성! 에픽+ 확정 티켓 {ticketsEarned}장 획득!
+                            </div>
+                          )}
+
+                          {/* 10 Cards Grid */}
+                          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 w-full mb-5">
+                            {gachaResultsTen.map((res, idx) => {
+                              const rarity = getPokemonRarity(res.pokemon.id);
+                              const style = gachaRarityStyles[rarity];
+                              const state = getPlayerPokemonState(res.pokemon.id);
+                              return (
+                                <div 
+                                  key={idx} 
+                                  className={`bg-slate-950/60 border-2 ${style.portalBorder} rounded p-1.5 flex flex-col items-center justify-between relative overflow-hidden shadow-pixel min-h-[110px]`}
+                                >
+                                  {/* Portal Glow background */}
+                                  <div className={`absolute top-0 w-full h-12 ${style.glowBg} rounded-full blur-[15px] pointer-events-none opacity-40`} />
+
+                                  <div className="text-[6px] font-pixel text-slate-550 z-10">
+                                    #{String(res.pokemon.id).padStart(3, '0')}
+                                  </div>
+
+                                  <div className="w-14 h-14 flex items-center justify-center relative z-10 my-0.5">
+                                    <img
+                                      src={res.pokemon.sprites.front_default}
+                                      alt={res.pokemon.koreanName}
+                                      className={`w-14 h-14 pixelated filter ${style.spriteGlow}`}
+                                    />
+                                  </div>
+
+                                  <div className="w-full text-center z-10 mt-1">
+                                    <div className="font-pixel text-[8.5px] font-black text-slate-100 truncate">
+                                      {res.pokemon.koreanName}
+                                    </div>
+                                    <div className="flex items-center justify-center gap-1 mt-1">
+                                      <span className={`px-1.5 py-0.2 rounded text-[6px] font-pixel border font-bold ${rarityBadges[rarity].style}`}>
+                                        {rarityBadges[rarity].label}
+                                      </span>
+                                      <span className="font-pixel text-[6px] bg-slate-900 text-poke-yellow border border-poke-yellow/20 px-1 py-0.2 rounded font-black">
+                                        Lv. {state.level}
+                                      </span>
+                                    </div>
+                                    {res.isDuplicate ? (
+                                      <div className="text-[6.5px] font-pixel text-indigo-400 font-bold mt-1 animate-pulse uppercase leading-none">
+                                        LEVEL UP!
+                                      </div>
+                                    ) : (
+                                      <div className="text-[6.5px] font-pixel text-emerald-400 font-bold mt-1 animate-pulse uppercase leading-none">
+                                        NEW!
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              sound.playSelect();
+                              setGachaResultsTen(null);
+                            }}
+                            className="w-full max-w-sm py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-750 text-slate-100 border-2 border-indigo-400 font-pixel text-[9px] font-black rounded transition shadow-pixel cursor-pointer flex items-center justify-center gap-1 transform active:translate-y-0.5"
+                          >
+                            결과 닫기 (CLOSE)
                           </button>
 
                         </div>
