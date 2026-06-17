@@ -3363,6 +3363,7 @@
           }, 1400);
           const releaseTimer = setTimeout(() => {
             setReleaseState('released');
+            setTurn(myPokemonObj.stats.speed >= wildPokemonObj.stats.speed ? 'player' : 'enemy');
           }, 1800);
 
           setEnemyReleaseState('released');
