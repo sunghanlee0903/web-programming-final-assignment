@@ -2965,12 +2965,12 @@
         const targetY = exploreY + dy;
 
         // 1. Bound check
-        if (targetY < 0 || targetY >= EXPLORE_MAP.length || targetX < 0 || targetX >= EXPLORE_MAP[0].length) {
+        if (targetY < 0 || targetY >= exploreMap.length || targetX < 0 || targetX >= exploreMap[0].length) {
           return;
         }
 
         // 2. Obstacle check
-        const tile = EXPLORE_MAP[targetY][targetX];
+        const tile = exploreMap[targetY][targetX];
         if (tile === 9) {
           return;
         }
@@ -3912,83 +3912,167 @@
                   <main className="w-full h-[61%] bg-gradient-to-b from-slate-950 via-[#0a122c] to-[#040817] border-4 border-slate-700 relative overflow-hidden rounded flex flex-col justify-between crt-effect p-3">
                     <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
 
-                    {/* 3D Perspective Battle Ground (z-0, mud-navy stadium texture!) */}
-                    <div className="absolute bottom-0 left-0 right-0 h-[64%] bg-gradient-to-b from-[#1b233a] to-[#0c0f1b] border-t-2 border-slate-800 z-0 overflow-hidden pointer-events-none select-none">
-                      {/* Grid perspective lines */}
-                      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:16px_16px] opacity-35" />
-
-                      {/* Giant Center Pokeball Decal (skewed for 3D perspective!) */}
-                      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-48 h-32 border-4 border-[#ffcc01]/25 rounded-full flex items-center justify-center transform scale-y-[0.4] rotate-[-12deg] opacity-45">
-                        <div className="w-full h-1 bg-[#ffcc01]/25 absolute top-1/2 -translate-y-1/2" />
-                        <div className="w-16 h-16 border-4 border-[#ffcc01]/30 bg-[#0c0f1b] rounded-full z-10 flex items-center justify-center">
-                          <div className="w-6 h-6 bg-[#ffcc01]/30 rounded-full" />
-                        </div>
-                      </div>
-
-                      {/* White Boundary Rings */}
-                      <div className="absolute bottom-4 left-6 w-32 h-14 border-2 border-slate-500/25 rounded-full transform scale-y-[0.3] rotate-[-10deg] opacity-45" />
-                      <div className="absolute top-4 right-6 w-28 h-12 border-2 border-slate-500/25 rounded-full transform scale-y-[0.3] rotate-[-10deg] opacity-45" />
-
-                      {/* Ground sand textures */}
-                      <div className="absolute bottom-0 left-0 right-0 h-full bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:12px_12px] opacity-[0.03]" />
-                    </div>
-
-                    {/* Majestic Stadium Searchlight Beams (z-10, below UI panels, pulsing mix-blend overlay!) */}
-                    <div className="absolute inset-0 pointer-events-none z-10 select-none overflow-hidden mix-blend-screen">
-                      <div className="absolute -top-10 -left-10 w-44 h-80 bg-gradient-to-br from-indigo-500/10 via-sky-400/5 to-transparent origin-top-left transform rotate-[25deg] blur-[2px] animate-pulse" style={{ animationDuration: '3.5s' }} />
-                      <div className="absolute -top-10 -right-10 w-44 h-80 bg-gradient-to-bl from-indigo-500/10 via-sky-400/5 to-transparent origin-top-right transform rotate-[-25deg] blur-[2px] animate-pulse" style={{ animationDuration: '4.5s' }} />
-                    </div>
-
-                    {/* Stadium Audience Background Layer (z-0, opacity-60 for realistic depth!) */}
-                    <div className="absolute top-0 left-0 right-0 h-[36%] border-b-2 border-slate-800 bg-[#0c101f] overflow-hidden flex flex-col justify-end pointer-events-none z-0 opacity-65 select-none">
-                      
-                      {/* Stadium Flash Lights Row */}
-                      <div className="absolute top-1 left-0 right-0 flex justify-around px-4">
-                        <span className="w-1 h-1 bg-sky-400 rounded-full animate-ping" />
-                        <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
-                        <span className="w-1 h-1 bg-rose-400 rounded-full animate-ping" style={{ animationDelay: '0.3s' }} />
-                        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                      </div>
-
-                      {/* Tiered spectator stands populated with animated dots */}
-                      <div className="flex flex-col gap-0.5 w-full pb-1">
-                        
-                        {/* Upper Tier 1 */}
-                        <div className="flex justify-center gap-1 px-6 opacity-75 scale-90">
-                          {Array.from({ length: 14 }).map((_, i) => {
-                            const colors = ['bg-rose-500', 'bg-sky-500', 'bg-yellow-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500'];
-                            const color = colors[i % colors.length];
-                            const anim = (i % 3 === 0) ? 'animate-audience-1' : (i % 3 === 1) ? 'animate-audience-2' : 'animate-audience-3';
-                            return (
-                              <div key={i} className={`w-2.5 h-3.5 rounded-t-full border border-slate-950 flex flex-col items-center justify-start ${color} ${anim}`}>
-                                <div className="w-1 h-1 bg-white/80 rounded-full mt-0.5" />
+                    {/* 3D Perspective Battle Ground (z-0, mud-navy stadium texture!) */}\n{exploreActive ? (
+                      /* Dynamic Biome Backgrounds (No Audience!) */
+                      (() => {
+                        if (exploreEncounterBiome === 1) {
+                          return (
+                            <>
+                              <div className="absolute inset-0 bg-gradient-to-b from-[#0b2915] via-[#061c0d] to-[#030e06] pointer-events-none z-0" />
+                              <div className="absolute bottom-0 left-0 right-0 h-[64%] bg-gradient-to-b from-[#12381e] to-[#092111] border-t-2 border-emerald-800 z-0 overflow-hidden pointer-events-none select-none">
+                                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:16px_16px] opacity-20" />
+                                <div className="absolute bottom-0 left-0 right-0 h-full bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:12px_12px] opacity-[0.08]" />
+                                <div className="absolute top-2 left-12 text-xs opacity-25">🌿</div>
+                                <div className="absolute top-3 right-16 text-xs opacity-20">🌿</div>
                               </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Lower Tier 2 */}
-                        <div className="flex justify-center gap-1.5 px-4 border-t border-slate-900 pt-0.5">
-                          {Array.from({ length: 16 }).map((_, i) => {
-                            const colors = ['bg-sky-500', 'bg-rose-500', 'bg-emerald-500', 'bg-violet-500', 'bg-yellow-500', 'bg-indigo-500'];
-                            const color = colors[(i + 2) % colors.length];
-                            const anim = (i % 3 === 0) ? 'animate-audience-3' : (i % 3 === 1) ? 'animate-audience-1' : 'animate-audience-2';
-                            return (
-                              <div key={i} className={`w-3 h-4 rounded-t-full border border-slate-950 flex flex-col items-center justify-start ${color} ${anim}`}>
-                                <div className="w-1.5 h-1.5 bg-white rounded-full mt-0.5" />
+                              <div className="absolute inset-0 pointer-events-none z-10 select-none overflow-hidden opacity-60">
+                                <div className="absolute top-2 left-6 text-[8px] animate-bounce" style={{ animationDuration: '4s' }}>🍃</div>
+                                <div className="absolute top-6 right-12 text-[7px] animate-pulse" style={{ animationDuration: '3s' }}>🍃</div>
+                                <div className="absolute top-12 left-1/3 text-[9px] animate-bounce" style={{ animationDuration: '5s' }}>🍃</div>
                               </div>
-                            );
-                          })}
+                            </>
+                          );
+                        }
+                        if (exploreEncounterBiome === 2) {
+                          return (
+                            <>
+                              <div className="absolute inset-0 bg-gradient-to-b from-[#0a203a] via-[#051426] to-[#020a14] pointer-events-none z-0" />
+                              <div className="absolute bottom-0 left-0 right-0 h-[64%] bg-gradient-to-b from-[#0c335c] to-[#061d36] border-t-2 border-blue-850 z-0 overflow-hidden pointer-events-none select-none">
+                                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:16px_16px] opacity-20" />
+                                <div className="absolute bottom-0 left-0 right-0 h-full bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:12px_12px] opacity-[0.08]" />
+                                <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-sky-400/20 blur-[1px] animate-pulse" />
+                              </div>
+                              <div className="absolute inset-0 pointer-events-none z-10 select-none overflow-hidden opacity-60">
+                                <div className="absolute bottom-4 left-10 text-[8px] animate-pulse" style={{ animationDuration: '2.5s' }}>🫧</div>
+                                <div className="absolute bottom-10 right-8 text-[6px] animate-bounce" style={{ animationDuration: '3.5s' }}>🫧</div>
+                                <div className="absolute bottom-16 left-1/2 text-[9px] animate-pulse" style={{ animationDuration: '4.5s' }}>🫧</div>
+                              </div>
+                            </>
+                          );
+                        }
+                        if (exploreEncounterBiome === 3) {
+                          return (
+                            <>
+                              <div className="absolute inset-0 bg-gradient-to-b from-[#181a20] via-[#0e0f14] to-[#050508] pointer-events-none z-0" />
+                              <div className="absolute bottom-0 left-0 right-0 h-[64%] bg-gradient-to-b from-[#252833] to-[#121319] border-t-2 border-slate-700/80 z-0 overflow-hidden pointer-events-none select-none">
+                                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:16px_16px] opacity-15" />
+                                <div className="absolute bottom-0 left-0 right-0 h-full bg-[radial-gradient(#64748b_1px,transparent_1px)] [background-size:12px_12px] opacity-[0.06]" />
+                                <div className="absolute top-2 left-6 text-xs opacity-15">🪨</div>
+                                <div className="absolute top-3 right-10 text-xs opacity-10">💎</div>
+                              </div>
+                              <div className="absolute inset-0 pointer-events-none z-10 select-none overflow-hidden opacity-40">
+                                <div className="absolute top-4 left-16 text-[6px] animate-pulse" style={{ animationDuration: '4s' }}>✨</div>
+                                <div className="absolute top-8 right-16 text-[5px] animate-pulse" style={{ animationDuration: '5s' }}>✨</div>
+                              </div>
+                            </>
+                          );
+                        }
+                        if (exploreEncounterBiome === 4) {
+                          return (
+                            <>
+                              <div className="absolute inset-0 bg-gradient-to-b from-[#2e0909] via-[#1a0404] to-[#0b0101] pointer-events-none z-0" />
+                              <div className="absolute bottom-0 left-0 right-0 h-[64%] bg-gradient-to-b from-[#5c1313] to-[#2e0909] border-t-2 border-red-900 z-0 overflow-hidden pointer-events-none select-none">
+                                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:16px_16px] opacity-25" />
+                                <div className="absolute bottom-0 left-0 right-0 h-full bg-[radial-gradient(#ef4444_1px,transparent_1px)] [background-size:12px_12px] opacity-[0.1]" />
+                                <div className="absolute bottom-2 left-1/4 w-24 h-1.5 bg-orange-500/30 rounded-full blur-[2px] animate-pulse" />
+                                <div className="absolute bottom-6 right-1/4 w-16 h-1 bg-red-500/40 rounded-full blur-[1px] animate-pulse" style={{ animationDelay: '0.5s' }} />
+                              </div>
+                              <div className="absolute inset-0 pointer-events-none z-10 select-none overflow-hidden opacity-60">
+                                <div className="absolute bottom-8 left-12 text-[7px] text-orange-400 animate-bounce" style={{ animationDuration: '2.5s' }}>🔥</div>
+                                <div className="absolute bottom-16 right-10 text-[6px] text-red-400 animate-bounce" style={{ animationDuration: '3.5s' }}>🔥</div>
+                                <div className="absolute bottom-24 left-1/3 text-[5px] text-yellow-500 animate-pulse" style={{ animationDuration: '1.8s' }}>✨</div>
+                              </div>
+                            </>
+                          );
+                        }
+                        // Fallback/Safe path background
+                        return (
+                          <>
+                            <div className="absolute inset-0 bg-gradient-to-b from-[#1c1815] via-[#0d0a08] to-[#040817] pointer-events-none z-0" />
+                            <div className="absolute bottom-0 left-0 right-0 h-[64%] bg-gradient-to-b from-[#2d241d] to-[#14100c] border-t-2 border-amber-900/45 z-0 overflow-hidden pointer-events-none select-none">
+                              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:16px_16px] opacity-15" />
+                              <div className="absolute bottom-0 left-0 right-0 h-full bg-[radial-gradient(#b45309_1px,transparent_1px)] [background-size:12px_12px] opacity-[0.05]" />
+                            </div>
+                          </>
+                        );
+                      })()
+                    ) : (
+                      /* Classic Stadium Background with Searchlights & Audience */
+                      <>
+                        {/* 3D Perspective Battle Ground (z-0, mud-navy stadium texture!) */}
+                        <div className="absolute bottom-0 left-0 right-0 h-[64%] bg-gradient-to-b from-[#1b233a] to-[#0c0f1b] border-t-2 border-slate-800 z-0 overflow-hidden pointer-events-none select-none">
+                          {/* Grid perspective lines */}
+                          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:16px_16px] opacity-35" />
+
+                          {/* Giant Center Pokeball Decal */}
+                          <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-48 h-32 border-4 border-[#ffcc01]/25 rounded-full flex items-center justify-center transform scale-y-[0.4] rotate-[-12deg] opacity-45">
+                            <div className="w-full h-1 bg-[#ffcc01]/25 absolute top-1/2 -translate-y-1/2" />
+                            <div className="w-16 h-16 border-4 border-[#ffcc01]/30 bg-[#0c0f1b] rounded-full z-10 flex items-center justify-center">
+                              <div className="w-6 h-6 bg-[#ffcc01]/30 rounded-full" />
+                            </div>
+                          </div>
+
+                          {/* White Boundary Rings */}
+                          <div className="absolute bottom-4 left-6 w-32 h-14 border-2 border-slate-500/25 rounded-full transform scale-y-[0.3] rotate-[-10deg] opacity-45" />
+                          <div className="absolute top-4 right-6 w-28 h-12 border-2 border-slate-500/25 rounded-full transform scale-y-[0.3] rotate-[-10deg] opacity-45" />
+
+                          {/* Ground sand textures */}
+                          <div className="absolute bottom-0 left-0 right-0 h-full bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:12px_12px] opacity-[0.03]" />
                         </div>
-                      </div>
 
-                      {/* Safety Fence row */}
-                      <div className="w-full h-1.5 bg-slate-800 border-t border-slate-900 relative">
-                        <div className="absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent,transparent_3px,#334155_3px,#334155_6px)] opacity-40" />
-                      </div>
-                    </div>
+                        {/* Majestic Stadium Searchlight Beams */}
+                        <div className="absolute inset-0 pointer-events-none z-10 select-none overflow-hidden mix-blend-screen">
+                          <div className="absolute -top-10 -left-10 w-44 h-80 bg-gradient-to-br from-indigo-500/10 via-sky-400/5 to-transparent origin-top-left transform rotate-[25deg] blur-[2px] animate-pulse" style={{ animationDuration: '3.5s' }} />
+                          <div className="absolute -top-10 -right-10 w-44 h-80 bg-gradient-to-bl from-indigo-500/10 via-sky-400/5 to-transparent origin-top-right transform rotate-[-25deg] blur-[2px] animate-pulse" style={{ animationDuration: '4.5s' }} />
+                        </div>
 
-                    {/* 1) Enemy Section (Top Right) */}
+                        {/* Stadium Audience Background Layer */}
+                        <div className="absolute top-0 left-0 right-0 h-[36%] border-b-2 border-slate-800 bg-[#0c101f] overflow-hidden flex flex-col justify-end pointer-events-none z-0 opacity-65 select-none">
+                          {/* Stadium Flash Lights Row */}
+                          <div className="absolute top-1 left-0 right-0 flex justify-around px-4">
+                            <span className="w-1 h-1 bg-sky-400 rounded-full animate-ping" />
+                            <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
+                            <span className="w-1 h-1 bg-rose-400 rounded-full animate-ping" style={{ animationDelay: '0.3s' }} />
+                            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                          </div>
+
+                          {/* spectator stands */}
+                          <div className="flex flex-col gap-0.5 w-full pb-1">
+                            <div className="flex justify-center gap-1 px-6 opacity-75 scale-90">
+                              {Array.from({ length: 14 }).map((_, i) => {
+                                const colors = ['bg-rose-500', 'bg-sky-500', 'bg-yellow-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500'];
+                                const color = colors[i % colors.length];
+                                const anim = (i % 3 === 0) ? 'animate-audience-1' : (i % 3 === 1) ? 'animate-audience-2' : 'animate-audience-3';
+                                return (
+                                  <div key={i} className={`w-2.5 h-3.5 rounded-t-full border border-slate-950 flex flex-col items-center justify-start ${color} ${anim}`}>
+                                    <div className="w-1 h-1 bg-white/80 rounded-full mt-0.5" />
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            <div className="flex justify-center gap-1.5 px-4 border-t border-slate-900 pt-0.5">
+                              {Array.from({ length: 16 }).map((_, i) => {
+                                const colors = ['bg-sky-500', 'bg-rose-500', 'bg-emerald-500', 'bg-violet-500', 'bg-yellow-500', 'bg-indigo-500'];
+                                const color = colors[(i + 2) % colors.length];
+                                const anim = (i % 3 === 0) ? 'animate-audience-3' : (i % 3 === 1) ? 'animate-audience-1' : 'animate-audience-2';
+                                return (
+                                  <div key={i} className={`w-3 h-4 rounded-t-full border border-slate-950 flex flex-col items-center justify-start ${color} ${anim}`}>
+                                    <div className="w-1.5 h-1.5 bg-white rounded-full mt-0.5" />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Safety Fence row */}
+                          <div className="w-full h-1.5 bg-slate-800 border-t border-slate-900 relative">
+                            <div className="absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent,transparent_3px,#334155_3px,#334155_6px)] opacity-40" />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    \n                                        {/* 1) Enemy Section (Top Right) */}
                     <div className="flex justify-between items-start w-full">
                       {/* Enemy HP panel (Top Left) */}
                       <div className="w-[46%] bg-slate-900/90 border-2 border-slate-700 p-2 rounded shadow-pixel backdrop-blur-sm relative z-20">
@@ -5143,12 +5227,18 @@
                       <span className="text-base select-none">🗺️</span>
                       <div className="text-left">
                         <h2 className="font-pixel text-[10px] text-poke-yellow font-black animate-pulse">
-                          WORLD EXPLORATION
+                          {(() => {
+                            if (exploreMap === FOREST_MAP) return "🌳 FOREST ADVENTURE (숲 지형)";
+                            if (exploreMap === OCEAN_MAP) return "🌊 OCEAN ADVENTURE (해양 지형)";
+                            if (exploreMap === VOLCANO_MAP) return "🌋 VOLCANO ADVENTURE (화산 지형)";
+                            if (exploreMap === CAVE_MAP) return "🪨 CAVE ADVENTURE (동굴 지형)";
+                            return "🗺️ MIXED WORLD ADVENTURE (혼합 지형)";
+                          })()}
                         </h2>
                         <p className="font-pixel text-[7px] text-slate-400">
                           현재 구역: <span className="text-white font-bold">{
                             (() => {
-                              const currentTile = EXPLORE_MAP[exploreY]?.[exploreX];
+                              const currentTile = exploreMap[exploreY]?.[exploreX];
                               if (currentTile === 1) return "🌿 싱그러운 풀숲 (Grass)";
                               if (currentTile === 2) return "🌊 잔잔한 물가 (Water)";
                               if (currentTile === 3) return "🪨 깊고 어두운 동굴 (Cave)";
@@ -5185,7 +5275,7 @@
                       className="w-full max-w-[480px] aspect-[15/12] grid gap-[1px] bg-slate-950 p-[1px] rounded"
                       style={{ display: 'grid', gridTemplateColumns: 'repeat(15, 1fr)' }}
                     >
-                      {EXPLORE_MAP.map((row, y) => 
+                      {exploreMap.map((row, y) => 
                         row.map((tile, x) => {
                           const isPlayer = x === exploreX && y === exploreY;
                           let tileClass = "tile-road";
@@ -5228,7 +5318,7 @@
                             <div>
                               <span className="font-pixel text-[7px] text-slate-500 block">선두 포켓몬</span>
                               <span className="font-pixel text-[8px] text-indigo-400 font-bold block mt-0.5">
-                                Lv.{pState?.level || 1} {selectedPokemon?.koreanName || "동반 파트너"}
+                                Lv.{pState?.level || 1} {exploreBuddy?.koreanName || "동반 파트너"} {exploreBuddy?.types ? `[${exploreBuddy.types.map(t => t.toUpperCase()).join('/')}]` : ''}
                               </span>
                             </div>
                           </div>
