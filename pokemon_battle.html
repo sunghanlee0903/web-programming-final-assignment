@@ -251,6 +251,23 @@
       animation: pokemon-recall 0.5s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
     }
 
+    @keyframes flash-fast {
+      0%, 100% { opacity: 0; background-color: white; }
+      20%, 60% { opacity: 1; background-color: white; }
+      40%, 80% { opacity: 0.8; background-color: #ef4444; }
+    }
+    .animate-flash-fast {
+      animation: flash-fast 0.6s ease-in-out infinite;
+    }
+
+    @keyframes bounce-short {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    .animate-bounce-short {
+      animation: bounce-short 0.6s ease-in-out infinite;
+    }
+
     @keyframes audience-jump {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-3.5px); }
@@ -451,6 +468,43 @@
     }
     .animate-scaleIn {
       animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    /* Explore mode biome custom styles */
+    .tile-road { background-color: rgba(120, 90, 70, 0.25); border: 1px solid rgba(120, 90, 70, 0.15); }
+    .tile-grass { background-color: rgba(16, 185, 129, 0.25); border: 1px solid rgba(16, 185, 129, 0.25); position: relative; }
+    .tile-grass::after { content: "🌿"; font-size: 8px; opacity: 0.35; position: absolute; bottom: 1px; right: 1px; }
+    .tile-water { background-color: rgba(59, 130, 246, 0.25); border: 1px solid rgba(59, 130, 246, 0.25); position: relative; }
+    .tile-water::after { content: "🌊"; font-size: 8px; opacity: 0.35; position: absolute; bottom: 1px; right: 1px; }
+    .tile-cave { background-color: rgba(100, 116, 139, 0.25); border: 1px solid rgba(100, 116, 139, 0.25); position: relative; }
+    .tile-cave::after { content: "🪨"; font-size: 8px; opacity: 0.35; position: absolute; bottom: 1px; right: 1px; }
+    .tile-volcano { background-color: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.25); position: relative; }
+    .tile-volcano::after { content: "🔥"; font-size: 8px; opacity: 0.35; position: absolute; bottom: 1px; right: 1px; }
+    .tile-tree { background-color: rgba(6, 78, 59, 0.7); border: 1px solid rgba(6, 78, 59, 0.5); position: relative; }
+    .tile-tree::after { content: "🌲"; font-size: 8px; opacity: 0.7; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+    /* Flash Transition Animation for Encounter */
+    @keyframes encounter-flash {
+      0% { opacity: 0; background-color: white; }
+      20% { opacity: 1; background-color: white; }
+      40% { opacity: 0; }
+      60% { opacity: 1; background-color: #000; }
+      80% { opacity: 0; }
+      100% { opacity: 1; background-color: #000; }
+    }
+    .animate-encounter-flash {
+      animation: encounter-flash 0.8s ease-in-out forwards;
+    }
+
+    /* Player Sprite Pulse Effect */
+    @keyframes player-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); }
+      70% { box-shadow: 0 0 0 6px rgba(251, 191, 36, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+    }
+    .player-avatar {
+      animation: player-pulse 1.5s infinite;
+      z-index: 10;
     }
   </style>
 </head>
@@ -798,6 +852,58 @@
     };
     const incrementChampionshipWins = () => {
       try { localStorage.setItem(CHAMP_COUNT_KEY, String(getChampionshipWins() + 1)); } catch(e) {}
+    };
+
+    // 2D Grid Explore Map (15 columns x 12 rows)
+    // 0: Road, 1: Grass, 2: Water, 3: Cave, 4: Volcano, 9: Tree (obstacle)
+    const EXPLORE_MAP = [
+      [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+      [9, 0, 0, 0, 9, 1, 1, 1, 9, 3, 3, 3, 9, 4, 9],
+      [9, 0, 0, 0, 0, 1, 1, 1, 0, 3, 3, 3, 0, 4, 9],
+      [9, 0, 0, 0, 9, 1, 1, 1, 9, 3, 3, 3, 9, 4, 9],
+      [9, 9, 0, 9, 9, 9, 0, 9, 9, 9, 0, 9, 9, 4, 9],
+      [9, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 4, 9],
+      [9, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 9, 4, 9],
+      [9, 9, 0, 9, 9, 9, 0, 9, 9, 9, 0, 9, 9, 9, 9],
+      [9, 1, 1, 1, 9, 4, 4, 4, 9, 1, 1, 1, 9, 0, 9],
+      [9, 1, 1, 1, 0, 4, 4, 4, 0, 1, 1, 1, 0, 0, 9],
+      [9, 1, 1, 1, 9, 4, 4, 4, 9, 1, 1, 1, 9, 9, 9],
+      [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+    ];
+
+    const EXPLORE_BIOME_POKEMON = {
+      // Grass (풀숲 🌿)
+      1: {
+        name: '수풀 구역',
+        normal: [10, 13, 16, 19, 29, 32, 43, 69, 172, 179],
+        rare: [11, 14, 17, 30, 33, 44, 70, 180],
+        epic: [12, 15, 18, 31, 34, 45, 71, 181, 25],
+        legendary: [251] // 세레비
+      },
+      // Water (물가 🌊)
+      2: {
+        name: '물가 구역',
+        normal: [60, 118, 129, 170, 183, 194],
+        rare: [7, 61, 119, 158, 171, 184, 195],
+        epic: [8, 9, 62, 130, 131, 159, 160, 186],
+        legendary: [249, 245] // 루기아, 스이쿤
+      },
+      // Cave (동굴 🪨)
+      3: {
+        name: '동굴 구역',
+        normal: [41, 50, 74, 95, 198, 200, 215, 220],
+        rare: [42, 51, 75, 207, 221, 246],
+        epic: [76, 169, 208, 247, 248],
+        legendary: [150, 243] // 뮤츠, 라이코
+      },
+      // Volcano (화산 🔥)
+      4: {
+        name: '화산 구역',
+        normal: [58, 77, 126, 218, 228],
+        rare: [4, 59, 78, 155, 219, 229],
+        epic: [5, 6, 156, 157],
+        legendary: [250, 244] // 칠색조, 앤테이
+      }
     };
 
     // CPU trainer roster (8강 참가자 7명 - 플레이어 제외)
@@ -1908,6 +2014,13 @@
       const [releaseState, setReleaseState] = useState('hidden');
       const [enemyReleaseState, setEnemyReleaseState] = useState('hidden');
 
+      // ==================== EXPLORE MODE STATES ====================
+      const [exploreActive, setExploreActive] = useState(false); // whether current battle is an explore battle
+      const [exploreX, setExploreX] = useState(2); // Initial player position X (road)
+      const [exploreY, setExploreY] = useState(2); // Initial player position Y (road)
+      const [exploreEncountering, setExploreEncountering] = useState(false); // encounter screen flash animation
+      const [exploreCapturedNew, setExploreCapturedNew] = useState(false);
+
       // ==================== CHAMPIONSHIP STATES ====================
       const [champTeam, setChampTeam] = useState([]); // [{id, pokemonData}] - 선택한 5마리
       const [champBracket, setChampBracket] = useState(null); // 대진표 구조
@@ -2755,6 +2868,21 @@
         setTurn('idle');
 
         const isWin = winnerStr === 'player';
+
+        // Explore Mode Capture Process
+        if (isWin && exploreActive) {
+          const isDuplicate = isPokemonUnlocked(enemy.id);
+          if (isDuplicate) {
+            const pState = getPlayerPokemonState(enemy.id);
+            const nextLevel = pState.level + 1;
+            savePlayerPokemonState(enemy.id, { level: nextLevel, exp: 0 });
+            setExploreCapturedNew(false);
+          } else {
+            unlockPokemon(enemy.id);
+            setExploreCapturedNew(true);
+          }
+          setUnlockedIds(getUnlockedPokemonIds());
+        }
         const baseXP = isWin ? Math.floor(Math.random() * 41) + 80 : Math.floor(Math.random() * 21) + 20;
         const multiplier = usedBall === 'greatball' ? 1.2 : usedBall === 'ultraball' ? 1.5 : 1.0;
         const xp = Math.floor(baseXP * multiplier);
@@ -2822,9 +2950,159 @@
         if (view === 'championship-battle') {
           setChampCooldown(); // 챔피언십 도중 퇴장(기권) 시에도 24시간 쿨다운 패널티 적용
         }
-        setView('select');
+        if (exploreActive) {
+          setView('explore');
+          setExploreActive(false);
+        } else {
+          setView('select');
+        }
         setSelectedPokemon(null);
       };
+
+      // Explore Mode Move Action
+      const handleExploreMove = (dx, dy) => {
+        const targetX = exploreX + dx;
+        const targetY = exploreY + dy;
+
+        // 1. Bound check
+        if (targetY < 0 || targetY >= EXPLORE_MAP.length || targetX < 0 || targetX >= EXPLORE_MAP[0].length) {
+          return;
+        }
+
+        // 2. Obstacle check
+        const tile = EXPLORE_MAP[targetY][targetX];
+        if (tile === 9) {
+          return;
+        }
+
+        setExploreX(targetX);
+        setExploreY(targetY);
+        sound.playTone(180, 'triangle', 0.05, 0, 0.02);
+
+        // 3. Encounter check (Grass, Water, Cave, Volcano)
+        if (tile === 1 || tile === 2 || tile === 3 || tile === 4) {
+          const encounterRate = tile === 2 || tile === 4 ? 0.12 : 0.10;
+          if (Math.random() < encounterRate) {
+            triggerExploreEncounter(tile);
+          }
+        }
+      };
+
+      // Trigger Explore Wild Encounter
+      const triggerExploreEncounter = async (tileType) => {
+        setExploreEncountering(true);
+        sound.playTone(120, 'sawtooth', 0.1, 0, 0.05);
+        sound.playTone(80, 'sawtooth', 0.1, 0.1, 0.05);
+        sound.playTone(60, 'sawtooth', 0.2, 0.2, 0.1);
+
+        // Calculate rarity weight: Legendary 0.5%, Epic 14.5%, Rare 35%, Normal 50%
+        const rand = Math.random() * 100;
+        let rarity = 'normal';
+        if (rand < 0.5) rarity = 'legendary';
+        else if (rand < 15) rarity = 'epic';
+        else if (rand < 50) rarity = 'rare';
+
+        const biome = EXPLORE_BIOME_POKEMON[tileType];
+        let idList = biome[rarity];
+        if (!idList || idList.length === 0) {
+          idList = biome.normal;
+        }
+
+        const wildId = idList[Math.floor(Math.random() * idList.length)];
+
+        setTimeout(async () => {
+          setExploreActive(true);
+          
+          const unlocked = unlockedIds.length > 0 ? unlockedIds : [25];
+          const activePlayerId = selectedPokemon ? selectedPokemon.id : (unlocked.includes(equippedBall) ? equippedBall : unlocked[0]);
+
+          const myPokemonObj = await fetchPokemonDetails(activePlayerId);
+          const pState = getPlayerPokemonState(myPokemonObj.id);
+          const pLevel = pState.level;
+
+          const eLevel = Math.max(1, pLevel + Math.floor(Math.random() * 7) - 3);
+
+          const scaleHP = (base, lv) => Math.floor(((2 * base + 31) * lv) / 100) + lv + 10;
+          const wildPokemonObj = await fetchPokemonDetails(wildId);
+
+          const pMax = scaleHP(myPokemonObj.stats.hp, pLevel);
+          const eMax = scaleHP(wildPokemonObj.stats.hp, eLevel);
+
+          const eqBall = getEquippedBall();
+          const inv = getBallInventory();
+          const activeBall = (eqBall !== 'pokeball' && inv[eqBall] <= 0) ? 'pokeball' : eqBall;
+          setUsedBall(activeBall);
+          consumeEquippedBall();
+          setBallInventory(getBallInventory());
+          setEquippedBall(getEquippedBall());
+
+          setPlayer(myPokemonObj);
+          setEnemy(wildPokemonObj);
+          setPlayerLevel(pLevel);
+          setEnemyLevel(eLevel);
+          setPlayerHP(pMax);
+          setEnemyHP(eMax);
+          setPlayerMaxHP(pMax);
+          setEnemyMaxHP(eMax);
+          setPlayerStatus(null);
+          setEnemyStatus(null);
+          setWinner(null);
+          setGold(getPlayerGold());
+          setEarnedGold(0);
+
+          const ballNameKo = activeBall === 'greatball' ? '슈퍼볼' : activeBall === 'ultraball' ? '하이퍼볼' : '몬스터볼';
+          setBattleLogs([
+            `야생의 Lv.${eLevel} ${wildPokemonObj.koreanName}(이)가 나타났다!`,
+            `${ballNameKo}로 Lv.${pLevel} ${myPokemonObj.koreanName}(이)가 나섰다!`
+          ]);
+
+          setReleaseState('roll');
+          const wiggleTimer = setTimeout(() => {
+            setReleaseState('wiggle');
+            sound.playTone(300, 'triangle', 0.08, 0, 0.04);
+          }, 800);
+          const openTimer = setTimeout(() => {
+            setReleaseState('open');
+            sound.playTone(600, 'sine', 0.15, 0, 0.08);
+          }, 1400);
+          const releaseTimer = setTimeout(() => {
+            setReleaseState('released');
+          }, 1800);
+
+          setEnemyReleaseState('released');
+
+          setView('battle');
+          setExploreEncountering(false);
+        }, 800);
+      };
+
+      // keyboard input for explore mode
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (view !== 'explore' || exploreEncountering) return;
+
+          let dx = 0;
+          let dy = 0;
+
+          if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+            dy = -1;
+          } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+            dy = 1;
+          } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+            dx = -1;
+          } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+            dx = 1;
+          }
+
+          if (dx !== 0 || dy !== 0) {
+            e.preventDefault();
+            handleExploreMove(dx, dy);
+          }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [view, exploreX, exploreY, exploreEncountering]);
 
       const handleRetrySame = () => {
         sound.playSelect();
@@ -3418,6 +3696,15 @@
                           <>🏆 챔피언십 도전 (CHAMPIONSHIP)</>
                         )}
                       </button>
+                      <button
+                        onClick={() => {
+                          sound.playSelect();
+                          setView('explore');
+                        }}
+                        className="flex-1 sm:flex-none px-6 py-3 font-pixel text-[9px] font-black rounded border transition shadow-pixel cursor-pointer flex items-center justify-center gap-2 transform active:translate-y-0.5 select-none bg-gradient-to-r from-emerald-600 to-teal-500 text-slate-950 border-emerald-400 hover:from-emerald-500 hover:to-teal-400"
+                      >
+                        🗺️ 월드 탐험 (EXPLORE)
+                      </button>
                     </footer>
 
                   {/* SUMMON SUCCESS OVERLAY MODAL */}
@@ -3951,6 +4238,16 @@
                             <span className="text-4xl mb-3">🏆</span>
                             <h2 className="text-sm font-pixel text-poke-yellow mb-2 animate-pulse">VICTORY!</h2>
                             <p className="text-xs text-slate-300 mb-4">배틀에서 멋지게 승리했습니다!</p>
+                            {exploreActive && (
+                              <div className="w-full mb-3 py-1.5 px-2 bg-indigo-950/80 border border-indigo-500 rounded text-center select-none shrink-0">
+                                <span className="font-pixel text-[8px] text-indigo-300 font-bold block">
+                                  {exploreCapturedNew ? '새로운 포켓몬 포획 성공!' : '이미 보유 중인 포켓몬입니다.'}
+                                </span>
+                                <span className="font-pixel text-[9px] text-white font-black block mt-0.5 animate-pulse">
+                                  {enemy.koreanName} {exploreCapturedNew ? '도감에 등록되었습니다!' : 'Lv + 1 상승!'}
+                                </span>
+                              </div>
+                            )}
                             
                             {/* EXP Gain Display & Animated EXP Bar */}
                             <div className="w-full bg-slate-950/60 p-3 rounded border border-slate-800 mb-4 text-left">
@@ -4833,6 +5130,163 @@
                       </button>
                     </>
                   )}
+                </div>
+              )}
+
+              {/* ROUTER VIEW: 8. EXPLORE VIEW (WORLD ADVENTURE) */}
+              {view === 'explore' && (
+                <div className="flex-1 flex flex-col p-3 md:p-4 w-full relative z-20 justify-between select-none overflow-hidden bg-[#050812] crt-effect">
+                  
+                  {/* Top Header Bar */}
+                  <header className="flex justify-between items-center border-b border-slate-800 pb-2 mb-2 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base select-none">🗺️</span>
+                      <div className="text-left">
+                        <h2 className="font-pixel text-[10px] text-poke-yellow font-black animate-pulse">
+                          WORLD EXPLORATION
+                        </h2>
+                        <p className="font-pixel text-[7px] text-slate-400">
+                          현재 구역: <span className="text-white font-bold">{
+                            (() => {
+                              const currentTile = EXPLORE_MAP[exploreY]?.[exploreX];
+                              if (currentTile === 1) return "🌿 싱그러운 풀숲 (Grass)";
+                              if (currentTile === 2) return "🌊 잔잔한 물가 (Water)";
+                              if (currentTile === 3) return "🪨 깊고 어두운 동굴 (Cave)";
+                              if (currentTile === 4) return "🔥 뜨거운 화산지대 (Volcano)";
+                              return "🚶 안전한 오솔길 (Safe Path)";
+                            })()
+                          }</span>
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => { sound.playSelect(); setView('select'); }}
+                      className="px-2 py-1 bg-slate-900 border border-slate-800 hover:border-rose-500 text-slate-400 hover:text-rose-500 rounded text-[7px] font-pixel shadow-pixel transition cursor-pointer flex items-center gap-1"
+                    >
+                      <i data-lucide="log-out" className="w-2 h-2"></i> 탐험 종료
+                    </button>
+                  </header>
+
+                  {/* Adventure Map Area */}
+                  <div className="flex-1 flex items-center justify-center my-1 relative overflow-hidden bg-slate-950/90 rounded-lg border-2 border-slate-800 p-1">
+                    {/* Screen Flash Transition Overlay when encountering a wild pokemon */}
+                    {exploreEncountering && (
+                      <div className="absolute inset-0 z-50 animate-encounter-flash flex flex-col items-center justify-center">
+                        <span className="text-3xl mb-2 animate-bounce">⚡</span>
+                        <span className="font-pixel text-[10px] text-white font-black animate-pulse bg-black/60 px-3 py-1.5 rounded border border-white/20">
+                          야생 포켓몬을 발견했다!
+                        </span>
+                      </div>
+                    )}
+
+                    {/* 15x12 Map Grid */}
+                    <div 
+                      className="w-full max-w-[480px] aspect-[15/12] grid gap-[1px] bg-slate-950 p-[1px] rounded"
+                      style={{ display: 'grid', gridTemplateColumns: 'repeat(15, 1fr)' }}
+                    >
+                      {EXPLORE_MAP.map((row, y) => 
+                        row.map((tile, x) => {
+                          const isPlayer = x === exploreX && y === exploreY;
+                          let tileClass = "tile-road";
+                          if (tile === 1) tileClass = "tile-grass";
+                          else if (tile === 2) tileClass = "tile-water";
+                          else if (tile === 3) tileClass = "tile-cave";
+                          else if (tile === 4) tileClass = "tile-volcano";
+                          else if (tile === 9) tileClass = "tile-tree";
+
+                          return (
+                            <div 
+                              key={`${y}-${x}`}
+                              className={`aspect-square flex items-center justify-center transition-all duration-100 ${tileClass} relative rounded-[1px]`}
+                            >
+                              {isPlayer ? (
+                                <div className="absolute inset-0.5 bg-yellow-400/90 border border-slate-950 rounded flex items-center justify-center player-avatar shadow-pixelYellow transform scale-105">
+                                  <span className="text-[10px] sm:text-xs animate-bounce" style={{ animationDuration: '0.6s' }}>🚶</span>
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Controls / Info Bar Footer */}
+                  <footer className="mt-2 pt-2 border-t border-slate-800/80 shrink-0 flex flex-col sm:flex-row gap-3 items-center justify-between">
+                    
+                    {/* Active Buddy Information */}
+                    <div className="flex items-center gap-2 bg-slate-900/50 border border-slate-800/80 px-2.5 py-1.5 rounded w-full sm:w-auto">
+                      {(() => {
+                        const unlocked = unlockedIds.length > 0 ? unlockedIds : [25];
+                        const activeId = selectedPokemon ? selectedPokemon.id : (unlocked.includes(equippedBall) ? equippedBall : unlocked[0]);
+                        const pState = getPlayerPokemonState(activeId);
+                        
+                        return (
+                          <div className="flex items-center gap-1.5 text-left select-none">
+                            <span className="text-sm">🛡️</span>
+                            <div>
+                              <span className="font-pixel text-[7px] text-slate-500 block">선두 포켓몬</span>
+                              <span className="font-pixel text-[8px] text-indigo-400 font-bold block mt-0.5">
+                                Lv.{pState?.level || 1} {selectedPokemon?.koreanName || "동반 파트너"}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Touch / Mobile D-Pad Control Panel */}
+                    <div className="flex items-center justify-center bg-slate-900/80 border border-slate-800 p-2 rounded-lg gap-2 shadow-pixel shrink-0 relative">
+                      {/* D-Pad Layout */}
+                      <div className="grid grid-cols-3 gap-1 w-24 h-24 relative">
+                        <div />
+                        <button
+                          onClick={() => handleExploreMove(0, -1)}
+                          className="bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-700 active:translate-y-0.5 rounded flex items-center justify-center cursor-pointer shadow-sm text-slate-300 font-bold text-xs"
+                          title="위로"
+                        >
+                          ▲
+                        </button>
+                        <div />
+                        
+                        <button
+                          onClick={() => handleExploreMove(-1, 0)}
+                          className="bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-700 active:translate-y-0.5 rounded flex items-center justify-center cursor-pointer shadow-sm text-slate-300 font-bold text-xs"
+                          title="왼쪽"
+                        >
+                          ◀
+                        </button>
+                        <div className="bg-slate-950 rounded border border-slate-800 flex items-center justify-center text-[7px] font-pixel text-slate-500 font-black">
+                          DPAD
+                        </div>
+                        <button
+                          onClick={() => handleExploreMove(1, 0)}
+                          className="bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-700 active:translate-y-0.5 rounded flex items-center justify-center cursor-pointer shadow-sm text-slate-300 font-bold text-xs"
+                          title="오른쪽"
+                        >
+                          ▶
+                        </button>
+                        
+                        <div />
+                        <button
+                          onClick={() => handleExploreMove(0, 1)}
+                          className="bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-700 active:translate-y-0.5 rounded flex items-center justify-center cursor-pointer shadow-sm text-slate-300 font-bold text-xs"
+                          title="아래로"
+                        >
+                          ▼
+                        </button>
+                        <div />
+                      </div>
+                    </div>
+
+                    {/* Explanatory Help Badge */}
+                    <div className="hidden md:flex flex-col text-[7px] font-pixel text-slate-400 select-none text-right gap-1 max-w-[180px]">
+                      <span>⌨️ 방향키(Arrow Keys / WASD) 조작 가능</span>
+                      <span className="text-amber-500/80">풀숲/물가/동굴/화산 타일 이동 시 조우 확률 작동</span>
+                    </div>
+
+                  </footer>
                 </div>
               )}
 
