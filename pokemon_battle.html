@@ -688,6 +688,34 @@
       }
     };
 
+    const NATURES = {
+      hardy: { name: '노력', up: null, down: null },
+      lonely: { name: '외로움', up: 'attack', down: 'defense' },
+      brave: { name: '용감', up: 'attack', down: 'speed' },
+      adamant: { name: '고집', up: 'attack', down: 'spa' },
+      naughty: { name: '개구쟁이', up: 'attack', down: 'spd' },
+      bold: { name: '대담', up: 'defense', down: 'attack' },
+      docile: { name: '온순', up: null, down: null },
+      relaxed: { name: '무사태평', up: 'defense', down: 'speed' },
+      impish: { name: '장난꾸러기', up: 'defense', down: 'spa' },
+      lax: { name: '덜렁', up: 'defense', down: 'spd' },
+      timid: { name: '겁쟁이', up: 'speed', down: 'attack' },
+      hasty: { name: '성급', up: 'speed', down: 'defense' },
+      serious: { name: '성실', up: null, down: null },
+      jolly: { name: '명랑', up: 'speed', down: 'spa' },
+      naive: { name: '천진난만', up: 'speed', down: 'spd' },
+      modest: { name: '조심', up: 'spa', down: 'attack' },
+      mild: { name: '의젓', up: 'spa', down: 'defense' },
+      quiet: { name: '냉정', up: 'spa', down: 'speed' },
+      bashful: { name: '수줍음', up: null, down: null },
+      rash: { name: '덜렁', up: 'spa', down: 'spd' },
+      calm: { name: '차분', up: 'spd', down: 'attack' },
+      gentle: { name: '얌전', up: 'spd', down: 'defense' },
+      sassy: { name: '건방', up: 'spd', down: 'speed' },
+      careful: { name: '신중', up: 'spd', down: 'spa' },
+      quirky: { name: '변덕', up: null, down: null }
+    };
+
     const saveEpicTickets = (count) => {
       try {
         localStorage.setItem('pokemon_gacha_epic_tickets', String(count));
@@ -747,12 +775,26 @@
       const isDuplicate = unlocked.includes(drawnId);
       let ticketEarned = false;
 
+      let isShiny = false;
       if (isDuplicate) {
         // Already unlocked -> Level Up!
         const state = getPlayerPokemonState(drawnId);
-        savePlayerPokemonState(drawnId, { level: state.level + 1, exp: state.exp });
+        isShiny = !!state.isShiny;
+        savePlayerPokemonState(drawnId, { ...state, level: state.level + 1, exp: state.exp });
       } else {
         // New unlock!
+        isShiny = Math.random() < 0.02; // 2% probability
+        const natureKeys = Object.keys(NATURES);
+        const nature = natureKeys[Math.floor(Math.random() * natureKeys.length)];
+        const ivs = {
+          hp: Math.floor(Math.random() * 32),
+          attack: Math.floor(Math.random() * 32),
+          defense: Math.floor(Math.random() * 32),
+          spa: Math.floor(Math.random() * 32),
+          spd: Math.floor(Math.random() * 32),
+          speed: Math.floor(Math.random() * 32)
+        };
+        savePlayerPokemonState(drawnId, { level: 1, exp: 0, isShiny, nature, ivs });
         unlockPokemon(drawnId);
       }
 
@@ -766,7 +808,7 @@
         }
       }
 
-      return { id: drawnId, isDuplicate, ticketEarned };
+      return { id: drawnId, isDuplicate, ticketEarned, isShiny };
     };
 
     const BALLS_KEY = 'pokemon_ball_inventory';
@@ -835,9 +877,54 @@
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         const states = raw ? JSON.parse(raw) : {};
-        return states[id] || { level: 1, exp: 0 };
+        let state = states[id];
+        
+        if (!state) {
+          return { 
+            level: 1, 
+            exp: 0, 
+            isShiny: false,
+            nature: 'hardy',
+            ivs: { hp: 15, attack: 15, defense: 15, spa: 15, spd: 15, speed: 15 }
+          };
+        }
+
+        let updated = false;
+        if (state.isShiny === undefined) {
+          state.isShiny = false;
+          updated = true;
+        }
+        if (!state.nature) {
+          const natureKeys = Object.keys(NATURES);
+          state.nature = natureKeys[Math.floor(Math.random() * natureKeys.length)];
+          updated = true;
+        }
+        if (!state.ivs) {
+          state.ivs = {
+            hp: Math.floor(Math.random() * 32),
+            attack: Math.floor(Math.random() * 32),
+            defense: Math.floor(Math.random() * 32),
+            spa: Math.floor(Math.random() * 32),
+            spd: Math.floor(Math.random() * 32),
+            speed: Math.floor(Math.random() * 32)
+          };
+          updated = true;
+        }
+
+        if (updated) {
+          states[id] = state;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(states));
+        }
+
+        return state;
       } catch (e) {
-        return { level: 1, exp: 0 };
+        return { 
+          level: 1, 
+          exp: 0, 
+          isShiny: false,
+          nature: 'hardy',
+          ivs: { hp: 15, attack: 15, defense: 15, spa: 15, spd: 15, speed: 15 }
+        };
       }
     };
 
@@ -2149,9 +2236,31 @@
     };
 
     // ==================== E. MAIN PORTABLE APPLICATION ====================
+
+    const calcHP = (pokemon, level) => {
+      const base = pokemon.stats.hp;
+      const iv = pokemon.ivs ? pokemon.ivs.hp : 15;
+      return Math.floor(((2 * base + iv) * level) / 100) + level + 10;
+    };
+
+    const calcStat = (pokemon, statName, level) => {
+      const base = pokemon.stats[statName] || 50;
+      const iv = pokemon.ivs ? pokemon.ivs[statName] : 15;
+      const raw = Math.floor(((2 * base + iv) * level) / 100) + 5;
+      
+      // Nature modifier
+      let modifier = 1.0;
+      if (pokemon.nature && NATURES[pokemon.nature]) {
+        const nat = NATURES[pokemon.nature];
+        if (nat.up === statName) modifier = 1.1;
+        if (nat.down === statName) modifier = 0.9;
+      }
+      return Math.floor(raw * modifier);
+    };
+
     const App = () => {
       // Fetch specific single Pokemon helper (Moved to top of App to avoid hosting errors)
-      const fetchPokemonDetails = async (id) => {
+      const fetchPokemonDetails = async (id, forceShiny = false) => {
         const res = await axios.get(`https://pokeapi.co/api/v2/pokemon/${id}`);
         const apiData = res.data;
         const statsMap = {};
@@ -2159,19 +2268,63 @@
           statsMap[s.stat.name] = s.base_stat;
         });
         const tps = apiData.types.map(t => t.type.name);
+
+        const pState = getPlayerPokemonState(id);
+        const isUnlocked = getUnlockedPokemonIds().includes(id);
+
+        let isShiny = false;
+        let nature = 'hardy';
+        let ivs = { hp: 15, attack: 15, defense: 15, spa: 15, spd: 15, speed: 15 };
+
+        if (isUnlocked && pState) {
+          isShiny = forceShiny || !!pState.isShiny;
+          nature = pState.nature || 'hardy';
+          ivs = pState.ivs || ivs;
+        } else {
+          isShiny = forceShiny || (Math.random() < 0.02);
+          const natureKeys = Object.keys(NATURES);
+          nature = natureKeys[Math.floor(Math.random() * natureKeys.length)];
+          const isLegendary = ['epic', 'legendary'].includes(getPokemonRarity(id));
+          const minIV = isLegendary ? 20 : 0;
+          const randomIV = () => minIV + Math.floor(Math.random() * (32 - minIV));
+          ivs = {
+            hp: randomIV(),
+            attack: randomIV(),
+            defense: randomIV(),
+            spa: randomIV(),
+            spd: randomIV(),
+            speed: randomIV()
+          };
+        }
+
+        const frontDefault = isShiny
+          ? (apiData.sprites.front_shiny || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${apiData.id}.png`)
+          : (apiData.sprites.front_default || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${apiData.id}.png`);
+
+        const backDefault = isShiny
+          ? (apiData.sprites.back_shiny || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/shiny/${apiData.id}.png`)
+          : (apiData.sprites.back_default || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/${apiData.id}.png`);
+
         return {
           id: apiData.id,
           name: apiData.name,
           koreanName: getPokemonKoreanName(apiData.id, apiData.name, tps),
+          isShiny,
+          nature,
+          ivs,
           sprites: {
-            front_default: apiData.sprites.front_default || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${apiData.id}.png`,
-            back_default: apiData.sprites.back_default || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/${apiData.id}.png`,
+            front_default: frontDefault,
+            back_default: backDefault,
+            front_shiny: apiData.sprites.front_shiny || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${apiData.id}.png`,
+            back_shiny: apiData.sprites.back_shiny || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/shiny/${apiData.id}.png`,
           },
           stats: {
             hp: statsMap['hp'] || 50,
             attack: statsMap['attack'] || 50,
             defense: statsMap['defense'] || 50,
             speed: statsMap['speed'] || 50,
+            spa: statsMap['special-attack'] || 50,
+            spd: statsMap['special-defense'] || 50
           },
           types: tps,
           moves: getMovesForPokemon(tps),
@@ -2630,10 +2783,9 @@
           setChampRound(0);
           setChampRoundResult(null);
           // Init player team HPs
-          const scaleHP = (base, lv) => Math.floor(((2 * base + 31) * lv) / 100) + lv + 10;
           const initHPs = teamData.map(p => {
             const lv = getPlayerPokemonState(p.id).level;
-            return scaleHP(p.stats.hp, lv);
+            return calcHP(p, lv);
           });
           setChampPlayerTeamHPs(initHPs);
           setView('championship-bracket');
@@ -2650,7 +2802,6 @@
         sound.playSelect();
         setChampBattleStarting(true);
         try {
-          const scaleHP = (base, lv) => Math.floor(((2 * base + 31) * lv) / 100) + lv + 10;
           let opponentTeamData = [];
           let opponentTeamHPs = [];
 
@@ -2658,14 +2809,14 @@
             for (const entry of champChampionTeam) {
               const data = await fetchPokemonDetails(entry.id);
               opponentTeamData.push({ ...data, champLevel: entry.level });
-              opponentTeamHPs.push(scaleHP(data.stats.hp, entry.level));
+              opponentTeamHPs.push(calcHP(data, entry.level));
             }
             setChampOpponent({ name: 'RED', emoji: '🏆', badge: '챔피언', teamIds: champChampionTeam.map(e => e.id), baseLevel: 77, isChampion: true });
           } else {
             for (const id of opponentSlot.teamIds) {
               const data = await fetchPokemonDetails(id);
               opponentTeamData.push({ ...data, champLevel: opponentSlot.baseLevel });
-              opponentTeamHPs.push(scaleHP(data.stats.hp, opponentSlot.baseLevel));
+              opponentTeamHPs.push(calcHP(data, opponentSlot.baseLevel));
             }
             setChampOpponent(opponentSlot);
           }
@@ -3041,8 +3192,6 @@
         setBallInventory(getBallInventory());
         setEquippedBall(getEquippedBall());
 
-        const scaleHP = (base, lv) => Math.floor(((2 * base + 31) * lv) / 100) + lv + 10;
-
         try {
           // Select random enemy from Gen 1 and Gen 2 (up to 251)
           let eId = Math.floor(Math.random() * MAX_POKEMON_COUNT) + 1;
@@ -3050,8 +3199,8 @@
 
           const enemyObj = await fetchPokemonDetails(eId);
 
-          const pMax = scaleHP(selectedPokemon.stats.hp, pLevel);
-          const eMax = scaleHP(enemyObj.stats.hp, eLevel);
+          const pMax = calcHP(selectedPokemon, pLevel);
+          const eMax = calcHP(enemyObj, eLevel);
 
           setPlayer(selectedPokemon);
           setEnemy(enemyObj);
@@ -3207,8 +3356,8 @@
         }
 
         // 3. Stats & Critical (6.25%)
-        const pAtk = scaleStat(player.stats.attack, playerLevel);
-        const eDef = scaleStat(enemy.stats.defense, enemyLevel);
+        const pAtk = calcStat(player, 'attack', playerLevel);
+        const eDef = calcStat(enemy, 'defense', enemyLevel);
         const isCrit = Math.random() < 0.0625;
         const { multiplier, message } = getTypeEffectiveness(move.type, enemy.types);
 
@@ -3293,8 +3442,8 @@
         }
 
         // 3. Stats & Critical (6.25%)
-        const eAtk = scaleStat(enemy.stats.attack, enemyLevel);
-        const pDef = scaleStat(player.stats.defense, playerLevel);
+        const eAtk = calcStat(enemy, 'attack', enemyLevel);
+        const pDef = calcStat(player, 'defense', playerLevel);
         const isCrit = Math.random() < 0.0625;
         const { multiplier, message } = getTypeEffectiveness(move.type, player.types);
 
@@ -3631,11 +3780,10 @@
             ? Math.max(1, pLevel + Math.floor(Math.random() * 8) + 5)
             : Math.max(1, pLevel + Math.floor(Math.random() * 7) - 3);
 
-          const scaleHP = (base, lv) => Math.floor(((2 * base + 31) * lv) / 100) + lv + 10;
           const wildPokemonObj = await fetchPokemonDetails(wildId);
 
-          const pMax = scaleHP(myPokemonObj.stats.hp, pLevel);
-          const eMax = scaleHP(wildPokemonObj.stats.hp, eLevel);
+          const pMax = calcHP(myPokemonObj, pLevel);
+          const eMax = calcHP(wildPokemonObj, eLevel);
 
           const eqBall = getEquippedBall();
           const inv = getBallInventory();
@@ -3733,10 +3881,8 @@
         setBallInventory(getBallInventory());
         setEquippedBall(getEquippedBall());
 
-        const scaleHP = (base, lv) => Math.floor(((2 * base + 31) * lv) / 100) + lv + 10;
-
-        const pMax = scaleHP(player.stats.hp, pLevel);
-        const eMax = scaleHP(enemy.stats.hp, eLevel);
+        const pMax = calcHP(player, pLevel);
+        const eMax = calcHP(enemy, eLevel);
 
         setPlayerHP(pMax);
         setEnemyHP(eMax);
@@ -3954,16 +4100,29 @@
                                 <span className="font-pixel text-[8px] text-slate-500 block">
                                   INDEX NO. #{String(selectedPokemon.id).padStart(3, '0')}
                                 </span>
-                                <h3 className="font-pixel text-[13px] font-black text-slate-100 tracking-tight mt-0.5 flex items-center gap-1.5">
+                                <h3 className="font-pixel text-[13px] font-black text-slate-100 tracking-tight mt-0.5 flex items-center gap-1.5 leading-none">
+                                  {selectedPokemon.isShiny && <span className="text-rose-400 text-[8px] font-black border border-rose-500/30 bg-rose-950/50 px-1 py-0.2 rounded animate-pulse shrink-0">✨이로치✨</span>}
                                   {selectedPokemon.koreanName}
                                   <span className="text-poke-yellow animate-pulse text-[12px]">★</span>
                                 </h3>
-                                <span className="text-[10px] text-slate-400 capitalize italic block">{selectedPokemon.name}</span>
+                                <span className="text-[10px] text-slate-400 capitalize italic block mt-0.5">{selectedPokemon.name}</span>
                               </div>
                             </div>
 
                             {/* Sprite box */}
-                            <div className="w-full h-18 aspect-[2.4/1] bg-gradient-to-b from-slate-950 via-[#0a122c] to-slate-950 rounded border border-slate-855 flex items-center justify-center relative overflow-hidden group mb-2">
+                            <div className={`w-full h-18 aspect-[2.4/1] bg-gradient-to-b rounded border flex items-center justify-center relative overflow-hidden group mb-2 ${
+                              selectedPokemon.isShiny 
+                                ? 'from-slate-950 via-rose-950/25 to-slate-950 border-rose-500/40 shadow-[inset_0_0_10px_rgba(244,63,94,0.3)]' 
+                                : 'from-slate-950 via-[#0a122c] to-slate-950 border-slate-855'
+                            }`}>
+                              {selectedPokemon.isShiny && (
+                                <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                                  <div className="absolute top-2 left-4 text-[6px] text-yellow-300 animate-ping opacity-60">✨</div>
+                                  <div className="absolute bottom-3 right-6 text-[8px] text-pink-300 animate-pulse opacity-70">★</div>
+                                  <div className="absolute top-4 right-10 text-[5px] text-rose-300 animate-bounce opacity-50">✨</div>
+                                  <div className="absolute bottom-2 left-8 text-[7px] text-yellow-200 animate-ping opacity-80">★</div>
+                                </div>
+                              )}
                               <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:10px_10px] pointer-events-none" />
                               <img
                                 src={selectedPokemon.sprites.front_default}
@@ -3990,6 +4149,51 @@
                                       className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-300"
                                       style={{ width: `${pct}%` }}
                                     />
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Nature & IV Analysis */}
+                            {(() => {
+                              const state = getPlayerPokemonState(selectedPokemon.id);
+                              if (!state || !state.ivs) return null;
+                              const natureInfo = NATURES[state.nature] || { name: '노력', up: null, down: null };
+                              const ivSum = Object.values(state.ivs).reduce((sum, val) => sum + val, 0);
+                              
+                              let ivGrade = '보통이다';
+                              let ivGradeColor = 'text-slate-400 border-slate-700 bg-slate-900/40';
+                              if (ivSum >= 150) {
+                                ivGrade = '훌륭하다! ⭐';
+                                ivGradeColor = 'text-amber-300 border-amber-500 bg-amber-950/20';
+                              } else if (ivSum >= 100) {
+                                ivGrade = '상당히 우수하다';
+                                ivGradeColor = 'text-sky-300 border-sky-500 bg-sky-950/20';
+                              } else if (ivSum < 50) {
+                                ivGrade = '어려운 것 같다...';
+                                ivGradeColor = 'text-rose-400 border-rose-800 bg-rose-950/10';
+                              }
+
+                              let natureEffect = '보정 없음';
+                              if (natureInfo.up) {
+                                const upKo = natureInfo.up === 'attack' ? '공격' : natureInfo.up === 'defense' ? '방어' : natureInfo.up === 'spa' ? '특공' : natureInfo.up === 'spd' ? '특방' : '스피드';
+                                const downKo = natureInfo.down === 'attack' ? '공격' : natureInfo.down === 'defense' ? '방어' : natureInfo.down === 'spa' ? '특공' : natureInfo.down === 'spd' ? '특방' : '스피드';
+                                natureEffect = `▲${upKo} 10% / ▼${downKo} 10%`;
+                              }
+
+                              return (
+                                <div className="bg-slate-950/40 border border-slate-855/50 p-2 rounded mb-2 font-pixel text-[7.5px] leading-tight select-none">
+                                  <div className="flex justify-between items-center mb-1">
+                                    <span className="text-slate-400 font-bold">성격: <span className="text-slate-100 font-black">{natureInfo.name}</span> <span className="text-slate-500 font-normal">({natureEffect})</span></span>
+                                    <span className={`px-1.5 py-0.2 rounded border font-black text-[6.5px] ${ivGradeColor}`}>{ivGrade}</span>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-[7px] text-slate-500 font-bold border-t border-slate-900/50 pt-1.5">
+                                    <span>HP IV: <span className="text-slate-300">{state.ivs.hp}</span></span>
+                                    <span>공격 IV: <span className="text-slate-300">{state.ivs.attack}</span></span>
+                                    <span>방어 IV: <span className="text-slate-300">{state.ivs.defense}</span></span>
+                                    <span>특공 IV: <span className="text-slate-300">{state.ivs.spa}</span></span>
+                                    <span>특방 IV: <span className="text-slate-300">{state.ivs.spd}</span></span>
+                                    <span>스피드 IV: <span className="text-slate-300">{state.ivs.speed}</span></span>
                                   </div>
                                 </div>
                               );
@@ -4581,17 +4785,22 @@
                     const style = gachaRarityStyles[rarity];
                     return (
                       <div className="fixed inset-0 flex items-center justify-center backdrop-blur-md p-4 z-50 bg-slate-950/80 select-none animate-fadeIn">
-                        <div className={`max-w-sm w-full bg-[#0c101f] border-4 ${style.modalBorder} rounded-lg p-6 ${style.modalShadow} text-center flex flex-col items-center relative overflow-hidden crt-effect animate-scaleIn`}>
+                        <div className={`max-w-sm w-full bg-[#0c101f] border-4 rounded-lg p-6 text-center flex flex-col items-center relative overflow-hidden crt-effect animate-scaleIn ${
+                          gachaResult.isShiny
+                            ? 'border-rose-500 shadow-[0_0_35px_rgba(244,63,94,0.55)]'
+                            : `${style.modalBorder} ${style.modalShadow}`
+                        }`}>
                           <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] opacity-[0.02] pointer-events-none" />
                           
                           {/* Dynamic light rays */}
-                          <div className={`absolute top-12 w-48 h-48 ${style.glowBg} rounded-full blur-[40px] pointer-events-none`} />
+                          <div className={`absolute top-12 w-48 h-48 ${gachaResult.isShiny ? 'bg-rose-500/10' : style.glowBg} rounded-full blur-[40px] pointer-events-none`} />
 
                           <span className="text-4xl mb-2 animate-bounce">✨</span>
                           <h2 className="text-[12px] font-pixel text-poke-yellow tracking-widest animate-pulse font-black uppercase mb-1">
+                            {gachaResult.isShiny && <span className="text-rose-400 mr-1.5 animate-bounce">✨이로치✨</span>}
                             {gachaResultIsDuplicate ? 'POKÉMON LEVEL UP!' : 'NEW POKÉMON SUMMONED!'}
                           </h2>
-                          <p className={`text-[8.5px] font-pixel ${style.subText} font-bold mb-4 uppercase tracking-wide border-b ${style.subBorder} pb-1 w-full`}>
+                          <p className={`text-[8.5px] font-pixel ${gachaResult.isShiny ? 'text-rose-300' : style.subText} font-bold mb-4 uppercase tracking-wide border-b ${gachaResult.isShiny ? 'border-rose-900/50' : style.subBorder} pb-1 w-full`}>
                             {gachaResultIsDuplicate ? '이미 보유 중인 포켓몬이 등장하여 레벨이 1 올랐습니다!' : '신규 포켓몬이 도감에 잠금 해제되었습니다!'}
                           </p>
 
@@ -4602,14 +4811,29 @@
                           )}
 
                           {/* Holographic Portal Box */}
-                          <div className={`w-full aspect-video bg-gradient-to-b ${style.portalBg} rounded border-2 ${style.portalBorder} flex items-center justify-center relative overflow-hidden mb-4 shadow-[inset_0_0_12px_rgba(0,0,0,0.8)]`}>
+                          <div className={`w-full aspect-video bg-gradient-to-b rounded border-2 flex items-center justify-center relative overflow-hidden mb-4 shadow-[inset_0_0_12px_rgba(0,0,0,0.8)] ${
+                            gachaResult.isShiny
+                              ? 'from-slate-950 via-rose-950/45 to-slate-950 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.4)] animate-pulse'
+                              : `${style.portalBg} ${style.portalBorder}`
+                          }`}>
+                            {gachaResult.isShiny && (
+                              <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                                <div className="absolute top-1 left-8 text-xs text-yellow-300 animate-ping opacity-85">✨</div>
+                                <div className="absolute top-4 right-12 text-sm text-pink-300 animate-bounce opacity-90">★</div>
+                                <div className="absolute bottom-5 left-14 text-[10px] text-rose-300 animate-pulse opacity-75">✨</div>
+                                <div className="absolute bottom-2 right-4 text-xs text-yellow-200 animate-ping opacity-95">★</div>
+                                <div className="absolute top-8 left-2 text-sm text-yellow-400 animate-bounce opacity-80">★</div>
+                              </div>
+                            )}
                             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:10px_10px] pointer-events-none" />
                             <img
                               src={gachaResult.sprites.front_default}
                               alt={gachaResult.koreanName}
-                              className={`w-24 h-24 pixelated z-10 filter ${style.spriteGlow} transform scale-110`}
+                              className={`w-24 h-24 pixelated z-10 filter ${
+                                gachaResult.isShiny ? 'drop-shadow-[0_0_12px_rgba(244,63,94,0.8)]' : style.spriteGlow
+                              } transform scale-110`}
                             />
-                            <div className={`absolute bottom-2 w-20 h-4 ${style.shadowBg} rounded-full blur-[2px] transform -scale-y-50 pointer-events-none`} />
+                            <div className={`absolute bottom-2 w-20 h-4 ${gachaResult.isShiny ? 'bg-rose-500/30' : style.shadowBg} rounded-full blur-[2px] transform -scale-y-50 pointer-events-none`} />
                           </div>
 
                           {/* Specs & ID Info */}
@@ -4683,10 +4907,16 @@
                               return (
                                 <div 
                                   key={idx} 
-                                  className={`bg-slate-950/60 border-2 ${style.portalBorder} rounded p-1.5 flex flex-col items-center justify-between relative overflow-hidden shadow-pixel min-h-[110px]`}
+                                  className={`bg-slate-950/60 border-2 rounded p-1.5 flex flex-col items-center justify-between relative overflow-hidden shadow-pixel min-h-[110px] ${
+                                    res.pokemon.isShiny
+                                      ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.4)] animate-pulse'
+                                      : style.portalBorder
+                                  }`}
                                 >
                                   {/* Portal Glow background */}
-                                  <div className={`absolute top-0 w-full h-12 ${style.glowBg} rounded-full blur-[15px] pointer-events-none opacity-40`} />
+                                  <div className={`absolute top-0 w-full h-12 rounded-full blur-[15px] pointer-events-none opacity-40 ${
+                                    res.pokemon.isShiny ? 'bg-rose-500/20' : style.glowBg
+                                  }`} />
 
                                   <div className="text-[6px] font-pixel text-slate-550 z-10">
                                     #{String(res.pokemon.id).padStart(3, '0')}
@@ -4696,7 +4926,9 @@
                                     <img
                                       src={res.pokemon.sprites.front_default}
                                       alt={res.pokemon.koreanName}
-                                      className={`w-14 h-14 pixelated filter ${style.spriteGlow}`}
+                                      className={`w-14 h-14 pixelated filter ${
+                                        res.pokemon.isShiny ? 'drop-shadow-[0_0_8px_rgba(244,63,94,0.7)]' : style.spriteGlow
+                                      }`}
                                     />
                                   </div>
 
@@ -4719,6 +4951,11 @@
                                     ) : (
                                       <div className="text-[6.5px] font-pixel text-emerald-400 font-bold mt-1 animate-pulse uppercase leading-none">
                                         NEW!
+                                      </div>
+                                    )}
+                                    {res.pokemon.isShiny && (
+                                      <div className="text-[5.5px] font-pixel text-rose-400 font-black mt-0.5 tracking-wide animate-pulse uppercase leading-none">
+                                        ✨이로치✨
                                       </div>
                                     )}
                                   </div>
