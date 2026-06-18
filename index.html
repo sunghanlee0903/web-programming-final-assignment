@@ -716,6 +716,121 @@
       quirky: { name: '변덕', up: null, down: null }
     };
 
+    const GYM_LEADERS = [
+      {
+        id: 'falkner',
+        name: '비상',
+        title: '하늘을 나는 포켓몬 조련사',
+        badge: 'wing',
+        badgeName: '윙배지',
+        badgeEmoji: '🦅',
+        badgeColor: 'from-sky-400 to-indigo-500 shadow-sky-500/50',
+        reqLevel: 10,
+        bossId: 18, // 피죤투 (Pidgeot)
+        bossLevel: 12,
+        themeColor: 'from-sky-500/25 to-blue-600/5',
+        types: ['flying']
+      },
+      {
+        id: 'bugsy',
+        name: '호일',
+        title: '걸어 다니는 벌레 포켓몬 백과사전',
+        badge: 'hive',
+        badgeName: '하이브배지',
+        badgeEmoji: '🐞',
+        badgeColor: 'from-emerald-400 to-teal-600 shadow-emerald-500/50',
+        reqLevel: 18,
+        bossId: 123, // 스라크 (Scyther)
+        bossLevel: 20,
+        themeColor: 'from-emerald-500/25 to-teal-600/5',
+        types: ['bug']
+      },
+      {
+        id: 'whitney',
+        name: '꼭두',
+        title: '말괄량이 소동물 트레이너',
+        badge: 'plain',
+        badgeName: '플레인배지',
+        badgeEmoji: '⚪',
+        badgeColor: 'from-slate-300 to-slate-500 shadow-slate-400/50',
+        reqLevel: 25,
+        bossId: 241, // 밀탱크 (Miltank)
+        bossLevel: 28,
+        themeColor: 'from-pink-500/25 to-rose-600/5',
+        types: ['normal']
+      },
+      {
+        id: 'morty',
+        name: '유빈',
+        title: '천리안을 가진 선지자',
+        badge: 'fog',
+        badgeName: '포그배지',
+        badgeEmoji: '👻',
+        badgeColor: 'from-purple-500 to-indigo-850 shadow-purple-500/50',
+        reqLevel: 32,
+        bossId: 94, // 팬텀 (Gengar)
+        bossLevel: 36,
+        themeColor: 'from-purple-500/25 to-indigo-600/5',
+        types: ['ghost']
+      },
+      {
+        id: 'chuck',
+        name: '사도',
+        title: '무한한 격투의 사나이',
+        badge: 'storm',
+        badgeName: '스톰배지',
+        badgeEmoji: '👊',
+        badgeColor: 'from-red-500 to-amber-600 shadow-red-500/50',
+        reqLevel: 40,
+        bossId: 62, // 강챙이 (Poliwrath)
+        bossLevel: 44,
+        themeColor: 'from-red-500/25 to-amber-600/5',
+        types: ['fighting']
+      },
+      {
+        id: 'jasmine',
+        name: '규리',
+        title: '강철 방어의 아가씨',
+        badge: 'mineral',
+        badgeName: '미네랄배지',
+        badgeEmoji: '🔩',
+        badgeColor: 'from-zinc-400 to-stone-500 shadow-zinc-400/50',
+        reqLevel: 48,
+        bossId: 208, // 강철톤 (Steelix)
+        bossLevel: 52,
+        themeColor: 'from-zinc-500/25 to-stone-600/5',
+        types: ['steel']
+      },
+      {
+        id: 'pryce',
+        name: '류옹',
+        title: '영원한 겨울의 스승',
+        badge: 'glacier',
+        badgeName: '글레이셔배지',
+        badgeEmoji: '❄️',
+        badgeColor: 'from-cyan-300 to-blue-500 shadow-cyan-400/50',
+        reqLevel: 56,
+        bossId: 221, // 메꾸리 (Piloswine)
+        bossLevel: 60,
+        themeColor: 'from-cyan-500/25 to-blue-600/5',
+        types: ['ice']
+      },
+      {
+        id: 'clair',
+        name: '이향',
+        title: '신성한 용의 일족 후예',
+        badge: 'rising',
+        badgeName: '라이징배지',
+        badgeEmoji: '🐉',
+        badgeColor: 'from-indigo-500 to-violet-700 shadow-indigo-500/50',
+        reqLevel: 64,
+        bossId: 230, // 킹드라 (Kingdra)
+        bossLevel: 68,
+        themeColor: 'from-violet-500/25 to-fuchsia-600/5',
+        types: ['dragon']
+      }
+    ];
+
     const saveEpicTickets = (count) => {
       try {
         localStorage.setItem('pokemon_gacha_epic_tickets', String(count));
@@ -809,6 +924,45 @@
       }
 
       return { id: drawnId, isDuplicate, ticketEarned, isShiny };
+    };
+
+    const ITEMS_KEY = 'pokemon_item_inventory';
+
+    const getItemInventory = () => {
+      try {
+        const raw = localStorage.getItem(ITEMS_KEY);
+        if (!raw) {
+          const initial = { potion: 3, superpotion: 0, fullrestore: 0, revive: 1 };
+          localStorage.setItem(ITEMS_KEY, JSON.stringify(initial));
+          return initial;
+        }
+        return JSON.parse(raw);
+      } catch (e) {
+        return { potion: 3, superpotion: 0, fullrestore: 0, revive: 1 };
+      }
+    };
+
+    const saveItemInventory = (inv) => {
+      try {
+        localStorage.setItem(ITEMS_KEY, JSON.stringify(inv));
+      } catch (e) {}
+    };
+
+    const BADGES_KEY = 'pokemon_gym_badges';
+
+    const getObtainedBadges = () => {
+      try {
+        const raw = localStorage.getItem(BADGES_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    };
+
+    const saveObtainedBadges = (badges) => {
+      try {
+        localStorage.setItem(BADGES_KEY, JSON.stringify(badges));
+      } catch (e) {}
     };
 
     const BALLS_KEY = 'pokemon_ball_inventory';
@@ -2334,6 +2488,15 @@
       };
 
       const [view, setView] = useState('select'); // 'select' | 'battle' | 'history'
+      const [itemInventory, setItemInventory] = useState(() => getItemInventory());
+      const [obtainedBadges, setObtainedBadges] = useState(() => getObtainedBadges());
+      const [gymBattleActive, setGymBattleActive] = useState(false);
+      const [activeGymLeader, setActiveGymLeader] = useState(null);
+      const [showGymSelection, setShowGymSelection] = useState(false);
+      const [bagMenuOpen, setBagMenuOpen] = useState(false);
+      const [gymBattleStarting, setGymBattleStarting] = useState(false);
+      const [shopTab, setShopTab] = useState('balls'); // 'balls' | 'items'
+      const [miltankRolloutCount, setMiltankRolloutCount] = useState(0);
       const [searchTerm, setSearchTerm] = useState('');
       const [selectedPokemon, setSelectedPokemon] = useState(null);
       const [loadingDetails, setLoadingDetails] = useState(false);
@@ -3170,6 +3333,61 @@
           return item.koreanName.includes(query) || String(item.id).includes(query);
         });
 
+      const handleChallengeGym = async (leader) => {
+        if (!selectedPokemon) {
+          alert('배틀에 도전할 아군 포켓몬을 먼저 선택해 주세요!');
+          return;
+        }
+        sound.playSelect();
+        setGymBattleStarting(true);
+
+        try {
+          const pState = getPlayerPokemonState(selectedPokemon.id);
+          const pLevel = pState.level;
+          const eLevel = leader.bossLevel;
+
+          const myPokemonObj = await fetchPokemonDetails(selectedPokemon.id);
+          const enemyObj = await fetchPokemonDetails(leader.bossId);
+
+          const pMax = calcHP(myPokemonObj, pLevel);
+          const eMax = calcHP(enemyObj, eLevel);
+
+          setPlayer(myPokemonObj);
+          setEnemy(enemyObj);
+          setPlayerHP(pMax);
+          setEnemyHP(eMax);
+          setPlayerMaxHP(pMax);
+          setEnemyMaxHP(eMax);
+          setPlayerStatus(null);
+          setEnemyStatus(null);
+          setWinner(null);
+          setGold(getPlayerGold());
+          setEarnedGold(0);
+
+          setPlayerLevel(pState.level);
+          setEnemyLevel(eLevel);
+
+          setUsedBall('pokeball');
+
+          setBattleLogs([
+            `성도지방 체육관 관장 ${leader.name}이(가) 배틀을 신청했다!`,
+            `${leader.name}은(는) ${enemyObj.koreanName}을(를) 보냈다!`
+          ]);
+
+          setActiveGymLeader(leader);
+          setGymBattleActive(true);
+          setBagMenuOpen(false);
+
+          setView('battle');
+          setShowGymSelection(false);
+        } catch (err) {
+          console.error('Gym challenge load failed', err);
+          alert('관장 상세 정보를 불러오는 데 실패했습니다. 통신 상태를 확인해 주세요.');
+        } finally {
+          setGymBattleStarting(false);
+        }
+      };
+
       const handleStartBattle = async () => {
         if (!selectedPokemon || battleStarting) return;
         setBattleStarting(true);
@@ -3424,7 +3642,31 @@
         setIsAnimating(true);
         setTurn('idle');
 
-        const move = enemy.moves[Math.floor(Math.random() * enemy.moves.length)];
+        let move = enemy.moves[Math.floor(Math.random() * enemy.moves.length)];
+
+        // 관장전 스마트 AI
+        if (gymBattleActive) {
+          const superEffectiveMoves = enemy.moves.filter(m => {
+            const eff = getTypeEffectiveness(m.type, player.types);
+            return eff.multiplier > 1.0;
+          });
+          
+          if (superEffectiveMoves.length > 0 && Math.random() < 0.7) {
+            move = superEffectiveMoves[Math.floor(Math.random() * superEffectiveMoves.length)];
+          }
+
+          // 꼭두의 밀탱크 구르기 강제 시전 기믹
+          if (enemy.id === 241 && Math.random() < 0.4) {
+            move = {
+              name: 'rollout',
+              koreanName: '구르기',
+              type: 'rock',
+              power: 30,
+              accuracy: 90,
+              pp: 20
+            };
+          }
+        }
 
         // 1. Dash anim
         setActiveAnim({ type: 'enemy-attack', moveName: move.koreanName });
@@ -3435,6 +3677,7 @@
         // 2. Accuracy check
         if (Math.random() * 100 > move.accuracy) {
           setBattleLogs(prev => [...prev, `상대 ${enemy.koreanName}의 공격은 빗나갔다!`]);
+          if (enemy.id === 241) setMiltankRolloutCount(0); // 빗나갔을 시 구르기 카운터 리셋
           setActiveAnim({ type: null });
           setIsAnimating(false);
           setTimeout(() => setTurn('player'), 800);
@@ -3454,7 +3697,19 @@
 
         const critMult = isCrit ? 1.5 : 1.0;
         const rand = Math.random() * (1.0 - 0.85) + 0.85;
-        const baseDmg = Math.floor(((2 * enemyLevel / 5 + 2) * move.power * (eAtk / pDef)) / 50 + 2);
+        
+        let baseDmg = Math.floor(((2 * enemyLevel / 5 + 2) * move.power * (eAtk / pDef)) / 50 + 2);
+        
+        // 밀탱크 구르기 연속 사용 대미지 증가 연산
+        if (enemy.id === 241 && move.name === 'rollout') {
+          const nextRoll = miltankRolloutCount + 1;
+          setMiltankRolloutCount(nextRoll);
+          baseDmg = Math.floor(baseDmg * Math.pow(1.5, nextRoll - 1));
+          setBattleLogs(prev => [...prev, `꼭두의 밀탱크의 구르기가 연속으로 가속된다! (연속 ${nextRoll}회)`]);
+        } else {
+          if (enemy.id === 241) setMiltankRolloutCount(0); // 구르기가 아니면 카운터 리셋
+        }
+
         const damage = Math.max(1, Math.floor(baseDmg * critMult * multiplier * rand));
 
         // Shake & skill overlay
@@ -3578,7 +3833,18 @@
         const expResult = addExperience(player.id, xp);
 
         // Gold rewards calculations
-        const earnedG = isWin ? 2 : 1;
+        let earnedG = isWin ? 2 : 1;
+        if (gymBattleActive) {
+          earnedG = isWin ? 200 : 20;
+          if (isWin && activeGymLeader) {
+            const currentB = getObtainedBadges();
+            if (!currentB.includes(activeGymLeader.badge)) {
+              currentB.push(activeGymLeader.badge);
+              saveObtainedBadges(currentB);
+              setObtainedBadges(currentB);
+            }
+          }
+        }
         const finalGold = addPlayerGold(earnedG);
         setGold(finalGold);
         setEarnedGold(earnedG);
@@ -3644,6 +3910,10 @@
         sound.playSelect();
         if (view === 'championship-battle') {
           setChampCooldown(); // 챔피언십 도중 퇴장(기권) 시에도 24시간 쿨다운 패널티 적용
+        }
+        if (gymBattleActive) {
+          setGymBattleActive(false);
+          setActiveGymLeader(null);
         }
         if (exploreActive) {
           setView('explore');
@@ -3961,6 +4231,29 @@
                   <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch mb-4 overflow-hidden">
                     <section className="lg:col-span-7 bg-poke-card border-4 border-slate-800 p-3 rounded flex flex-col justify-between overflow-hidden shadow-pixel">
                       
+                      {/* GYM BADGES CABINET */}
+                      <div className="bg-slate-950/60 border-2 border-slate-900 rounded p-1.5 mb-2.5 flex justify-between items-center z-10 select-none shadow-[inset_0_0_8px_rgba(0,0,0,0.8)]">
+                        <span className="font-pixel text-[6px] text-slate-500 font-bold tracking-tighter uppercase mr-1">GYM BADGES:</span>
+                        <div className="flex gap-1.5 flex-1 justify-end">
+                          {GYM_LEADERS.map((leader, idx) => {
+                            const isObtained = obtainedBadges.includes(leader.badge);
+                            return (
+                              <div
+                                key={leader.id}
+                                title={`${leader.name} 관장의 ${leader.badgeName}`}
+                                className={`w-5.5 h-5.5 rounded-full flex items-center justify-center border text-[10px] transition duration-500 ${
+                                  isObtained
+                                    ? `bg-gradient-to-tr ${leader.badgeColor} border-white/20 shadow-[0_0_6px_rgba(255,255,255,0.4)] animate-pulse`
+                                    : 'bg-slate-950 border-slate-850 text-slate-700 opacity-25 grayscale'
+                                }`}
+                              >
+                                {leader.badgeEmoji}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
                       {/* Search Title with High Visibility Owned Badge */}
                         <div className="mb-2 shrink-0">
                           <h2 className="text-xs font-pixel text-slate-200 mb-2 tracking-wide flex justify-between items-center select-none">
@@ -4533,6 +4826,15 @@
                       <button
                         onClick={() => {
                           sound.playSelect();
+                          setShowGymSelection(true);
+                        }}
+                        className="flex-1 sm:flex-none px-6 py-3 font-pixel text-[9px] font-black rounded border transition shadow-pixel cursor-pointer flex items-center justify-center gap-2 transform active:translate-y-0.5 select-none bg-gradient-to-r from-sky-600 to-indigo-550 text-slate-100 border-sky-400 hover:from-sky-500 hover:to-indigo-450"
+                      >
+                        🏆 체육관 도전 (GYM)
+                      </button>
+                      <button
+                        onClick={() => {
+                          sound.playSelect();
                           setExploreBiomeModalOpen(true);
                         }}
                         className="flex-1 sm:flex-none px-6 py-3 font-pixel text-[9px] font-black rounded border transition shadow-pixel cursor-pointer flex items-center justify-center gap-2 transform active:translate-y-0.5 select-none bg-gradient-to-r from-emerald-600 to-teal-500 text-slate-950 border-emerald-400 hover:from-emerald-500 hover:to-teal-400"
@@ -4540,6 +4842,98 @@
                         🗺️ 월드 탐험 (EXPLORE)
                       </button>
                     </footer>
+
+                  {/* GYM CHALLENGE SELECT MODAL */}
+                  {showGymSelection && (
+                    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-md p-4 z-50 bg-slate-950/80 select-none animate-fadeIn">
+                      <div className="max-w-2xl w-full bg-[#0c101f] border-4 border-sky-500 rounded-lg p-5 text-center flex flex-col relative overflow-hidden crt-effect animate-scaleIn shadow-[0_0_25px_rgba(59,130,246,0.35)]">
+                        <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] opacity-[0.02] pointer-events-none" />
+                        
+                        <header className="mb-3 shrink-0 flex justify-between items-center border-b border-sky-900/50 pb-2">
+                          <h2 className="font-pixel text-[11px] text-poke-yellow font-black tracking-wide flex items-center gap-1.5">
+                            🏆 성도지방 체육관 도전 (GYM CHALLENGE)
+                          </h2>
+                          <button
+                            onClick={() => { sound.playSelect(); setShowGymSelection(false); }}
+                            className="font-pixel text-[9px] font-black text-rose-400 hover:underline cursor-pointer border border-rose-900/50 bg-rose-950/20 px-2 py-0.5 rounded"
+                          >
+                            X 닫기
+                          </button>
+                        </header>
+
+                        <p className="font-pixel text-[7.5px] text-slate-400 text-left mb-4 leading-normal">
+                          각 체육관의 관장을 격파하면 고유의 체육관 배지를 획득할 수 있습니다. 획득한 배지는 프로필 배지 전시함에 전시됩니다.
+                        </p>
+
+                        {/* Gym Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 overflow-y-auto max-h-[300px] pr-1 mt-1">
+                          {GYM_LEADERS.map((leader, index) => {
+                            const isObtained = obtainedBadges.includes(leader.badge);
+                            const prevObtained = index === 0 || obtainedBadges.includes(GYM_LEADERS[index - 1].badge);
+                            const challengeLocked = !isObtained && !prevObtained;
+
+                            return (
+                              <div
+                                key={leader.id}
+                                className={`border-2 rounded-lg p-2.5 flex flex-col items-center justify-between relative overflow-hidden h-[155px] ${
+                                  isObtained
+                                    ? 'bg-sky-950/20 border-sky-500/70 shadow-[0_0_12px_rgba(59,130,246,0.2)]'
+                                    : !challengeLocked
+                                      ? 'bg-slate-900/80 border-slate-700 hover:border-sky-500/50'
+                                      : 'bg-slate-950/60 border-slate-950 opacity-40 grayscale pointer-events-none'
+                                }`}
+                              >
+                                {/* Gym Leader theme color bg */}
+                                <div className={`absolute top-0 inset-x-0 h-10 bg-gradient-to-b ${leader.themeColor} pointer-events-none`} />
+
+                                <div className="z-10 flex flex-col items-center text-center w-full leading-none">
+                                  <span className={`text-[6px] font-pixel px-1.5 py-0.2 rounded border font-bold uppercase ${
+                                    isObtained ? 'bg-sky-950/80 border-sky-500 text-sky-300' : 'bg-slate-950 border-slate-800 text-slate-400'
+                                  }`}>
+                                    GYM #{index + 1}
+                                  </span>
+                                  <h3 className="font-pixel text-[10px] font-black text-slate-100 tracking-tight mt-1.5 leading-none">
+                                    {leader.name} {isObtained && '✓'}
+                                  </h3>
+                                  <span className="text-[6.5px] font-pixel text-slate-550 block truncate w-full mt-1.5">{leader.title}</span>
+                                </div>
+
+                                {/* Badge Graphic mock */}
+                                <div className="my-1.5 w-10 h-10 flex items-center justify-center relative z-10">
+                                  <div className={`w-9 h-9 rounded-full flex items-center justify-center border text-lg shadow-pixel transition duration-300 ${
+                                    isObtained
+                                      ? `bg-gradient-to-tr ${leader.badgeColor} border-white/20 animate-pulse`
+                                      : 'bg-slate-950 border-slate-800 text-slate-700'
+                                  }`}>
+                                    {leader.badgeEmoji}
+                                  </div>
+                                </div>
+
+                                <div className="w-full z-10 leading-none">
+                                  <span className="font-pixel text-[6.5px] text-slate-400 block text-center mb-1.5">
+                                    Lv.{leader.bossLevel} 보스 테마
+                                  </span>
+                                  <button
+                                    onClick={() => handleChallengeGym(leader)}
+                                    disabled={challengeLocked || gymBattleStarting}
+                                    className={`w-full py-1.5 font-pixel text-[7.5px] font-bold rounded border cursor-pointer transition transform active:translate-y-0.5 disabled:opacity-40 disabled:pointer-events-none ${
+                                      isObtained
+                                        ? 'bg-sky-900 border-sky-600 text-slate-100 hover:bg-sky-850'
+                                        : !challengeLocked
+                                          ? 'bg-gradient-to-r from-sky-500 to-indigo-600 border-sky-400 text-slate-100 hover:from-sky-450 hover:to-indigo-550'
+                                          : 'bg-slate-950 text-slate-650 border-slate-900'
+                                    }`}
+                                  >
+                                    {isObtained ? '재도전' : '도전하기'}
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* EXPLORE BIOME SELECT MODAL */}
                   {exploreBiomeModalOpen && (
